@@ -15,6 +15,8 @@ import {
   isSessionApproved,
   handlePlacetopayError,
 } from '@/app/lib/placetopay-helpers';
+import { generateAuth } from '@/app/auth/evertec-auth';
+import { getEvertecConfig } from '@/app/config/evertec';
 import type { GetSessionResponse } from '@/app/types/evertec';
 
 /**
@@ -51,9 +53,13 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
 
+    // Generate auth credentials for PlacetoPay API request
+    const config = getEvertecConfig();
+    const auth = generateAuth(config.login, config.secretKey);
+
     // Query the actual session status from PlacetoPay
     // This is important for security - always verify with the API, don't trust notification alone
-    const { data, status: httpStatus } = await getCheckoutSessionStatus(requestId);
+    const { data, status: httpStatus } = await getCheckoutSessionStatus(requestId, auth);
 
     // Check if response is an error
     if (isPlacetopayError(data)) {
