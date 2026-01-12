@@ -8,6 +8,7 @@ import { EVERTEC_ECR_ENDPOINTS } from '@/app/config/evertec-ecr';
 import {
   buildBaseRequest,
   validateRequiredFields,
+  validateTransactionAmounts,
   makeTerminalRequest,
   handleTerminalError,
   createApiDocumentation,
@@ -46,6 +47,12 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       );
+    }
+
+    // Validate Puerto Rico tax compliance
+    const taxValidation = validateTransactionAmounts(payload.amounts);
+    if (!taxValidation.valid) {
+      return taxValidation.error!;
     }
 
     const { data, status } = await makeTerminalRequest<TransactionResponse>(

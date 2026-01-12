@@ -33,7 +33,8 @@ export function getEvertecConfig(): EvertecConfig {
   }
 
   return {
-    baseUrl,
+    // Normalize base URL by removing trailing slash
+    baseUrl: baseUrl.replace(/\/$/, ''),
     login,
     secretKey,
     returnUrl,

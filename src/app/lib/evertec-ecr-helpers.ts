@@ -9,7 +9,11 @@ import {
   buildEndpointUrl,
   getDefaultHeaders,
 } from '@/app/config/evertec-ecr';
-import type { BaseRequest, EvertecEcrError } from '@/app/types/evertec-ecr';
+import type {
+  BaseRequest,
+  EvertecEcrError,
+  TransactionAmounts,
+} from '@/app/types/evertec-ecr';
 
 /**
  * Validates and enriches base request with defaults from config
@@ -107,6 +111,118 @@ export function handleTerminalError(error: unknown): NextResponse {
     } as EvertecEcrError,
     { status: 500 }
   );
+}
+
+/**
+ * Validates Puerto Rico tax compliance for transaction amounts
+ *
+ * IMPORTANT: Puerto Rico tax law requires paired tax fields:
+ * - If base_state_tax is provided, base_reduced_tax MUST also be provided
+ * - If state_tax is provided, reduced_tax MUST also be provided
+ * - Even if no reduced tax items exist, use "0.00" for both fields
+ *
+ * This validation prevents terminal rejection error code ZY:
+ * "AMOUNT FOR STATE REDUCED TAX NEEDED"
+ *
+ * @param amounts - Transaction amounts object to validate
+ * @returns Validation result with error response if invalid
+ */
+export function validateTransactionAmounts(
+  amounts: TransactionAmounts
+): { valid: boolean; error?: NextResponse } {
+  // Check if any tax fields are provided
+  const hasBaseStateTax = amounts.base_state_tax !== undefined;
+  const hasBaseReducedTax = amounts.base_reduced_tax !== undefined;
+  const hasStateTax = amounts.state_tax !== undefined;
+  const hasReducedTax = amounts.reduced_tax !== undefined;
+
+  // If any tax field is provided, all four must be provided
+  const hasSomeTaxFields =
+    hasBaseStateTax || hasBaseReducedTax || hasStateTax || hasReducedTax;
+
+  if (hasSomeTaxFields) {
+    // Validate all required tax fields are present
+    if (!hasBaseStateTax) {
+      return {
+        valid: false,
+        error: NextResponse.json(
+          {
+            error_code: 'TAX_VALIDATION_ERROR',
+            error_message:
+              'Puerto Rico tax compliance: base_state_tax is required when using tax fields. Set to "0.00" if no standard tax items.',
+          } as EvertecEcrError,
+          { status: 400 }
+        ),
+      };
+    }
+
+    if (!hasBaseReducedTax) {
+      return {
+        valid: false,
+        error: NextResponse.json(
+          {
+            error_code: 'TAX_VALIDATION_ERROR',
+            error_message:
+              'Puerto Rico tax compliance: base_reduced_tax is required when using tax fields. Set to "0.00" if no reduced tax items.',
+          } as EvertecEcrError,
+          { status: 400 }
+        ),
+      };
+    }
+
+    if (!hasStateTax) {
+      return {
+        valid: false,
+        error: NextResponse.json(
+          {
+            error_code: 'TAX_VALIDATION_ERROR',
+            error_message:
+              'Puerto Rico tax compliance: state_tax is required when using tax fields. Set to "0.00" if no standard tax items.',
+          } as EvertecEcrError,
+          { status: 400 }
+        ),
+      };
+    }
+
+    if (!hasReducedTax) {
+      return {
+        valid: false,
+        error: NextResponse.json(
+          {
+            error_code: 'TAX_VALIDATION_ERROR',
+            error_message:
+              'Puerto Rico tax compliance: reduced_tax is required when using tax fields. Set to "0.00" if no reduced tax items.',
+          } as EvertecEcrError,
+          { status: 400 }
+        ),
+      };
+    }
+
+    // Validate that tax fields are valid numeric strings
+    const taxFields = [
+      amounts.base_state_tax,
+      amounts.base_reduced_tax,
+      amounts.state_tax,
+      amounts.reduced_tax,
+    ];
+
+    for (const field of taxFields) {
+      if (field && isNaN(parseFloat(field))) {
+        return {
+          valid: false,
+          error: NextResponse.json(
+            {
+              error_code: 'TAX_VALIDATION_ERROR',
+              error_message: `Tax field value "${field}" is not a valid numeric string`,
+            } as EvertecEcrError,
+            { status: 400 }
+          ),
+        };
+      }
+    }
+  }
+
+  return { valid: true };
 }
 
 /**

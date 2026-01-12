@@ -68,7 +68,23 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    const data: LogonResponse | EvertecEcrError = await response.json();
+    // Try to parse as JSON (terminals may not set correct Content-Type header)
+    let data: LogonResponse | EvertecEcrError;
+    try {
+      data = await response.json();
+    } catch {
+      // If JSON parsing fails, get text response for debugging
+      const textResponse = await response.text().catch(() => 'Unable to read response body');
+      console.error('Failed to parse terminal response:', textResponse.substring(0, 200));
+
+      return NextResponse.json(
+        {
+          error_code: 'INVALID_RESPONSE',
+          error_message: `Terminal returned invalid JSON. Status: ${response.status}. Check EVERTEC_ECR_TERMINAL_URL configuration.`,
+        } as EvertecEcrError,
+        { status: 502 }
+      );
+    }
 
     // Return response
     return NextResponse.json(data, { status: response.status });

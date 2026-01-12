@@ -1,9 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { dummyBasicCheckoutRequest, dummySubscriptionRequest, dummyPartialPaymentRequest } from '../mockup/checkout';
+import {
+  dummyBasicCheckoutRequest,
+  dummyPartialPaymentRequest,
+  dummySubscriptionRequest,
+  dummySubscriptionOnlyRequest,
+  generateDummyAuth,
+} from '../mockup/checkout';
 import {
   mockLogonRequest,
+  mockBaseTransactionRequest,
   mockSaleRequest,
   mockVoidRequest,
   mockGetStatusRequest,
@@ -29,8 +36,10 @@ type ExamplePayload = Partial<Omit<CreateSessionRequest, 'auth'>> | Record<strin
 
 const API_ENDPOINTS: ApiEndpoint[] = [
   // PlacetoPay Checkout
+  { id: 'generate-auth', name: 'Generate Auth', method: 'POST', path: '/api/placetopay/auth/generate', description: 'Generate PlacetoPay auth credentials', category: 'PlacetoPay - Checkout' },
   { id: 'create-session', name: 'Create Checkout Session', method: 'POST', path: '/api/placetopay/checkout/create-session', description: 'Creates checkout session', category: 'PlacetoPay - Checkout' },
   { id: 'get-session', name: 'Get Session Status', method: 'POST', path: '/api/placetopay/checkout/get-session/:requestId', description: 'Get session status', category: 'PlacetoPay - Checkout' },
+  { id: 'notifications', name: 'Notification Handler', method: 'POST', path: '/api/placetopay/notifications', description: 'Receives async notifications', category: 'PlacetoPay - Checkout' },
 
   // Evertec ECR - Session
   { id: 'ecr-logon', name: 'Terminal Logon', method: 'POST', path: '/api/evertec/session/logon', description: 'Establish terminal session', category: 'Evertec ECR - Session' },
@@ -98,10 +107,17 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 
 const EXAMPLE_PAYLOADS: Record<string, ExamplePayload> = {
   // PlacetoPay Examples
+  'generate-auth': {
+    login: '8196b60bef698bac55d8cd9ae5d841b0',
+    secretKey: '58FlCK66f83QW2M8',
+  },
+  'create-session': dummyBasicCheckoutRequest,
   'create-session-basic': dummyBasicCheckoutRequest,
-  'create-session-subscription': dummySubscriptionRequest,
+  'create-session-recurring': dummySubscriptionRequest,
+  'create-session-subscription': dummySubscriptionOnlyRequest,
   'create-session-partial': dummyPartialPaymentRequest,
-  'get-session': {},
+  'get-session': { auth: generateDummyAuth() },
+  'notifications': { requestId: 123456, status: { status: 'APPROVED', reason: '00', message: 'Approved', date: new Date().toISOString() } },
 
   // Evertec ECR Examples - Session
   'ecr-logon': mockLogonRequest,
@@ -112,59 +128,59 @@ const EXAMPLE_PAYLOADS: Record<string, ExamplePayload> = {
   'ecr-start-ath-movil-sale': { ...mockSaleRequest, terminal_id: '30DR3473' },
 
   // EBT - all use similar structure with amounts
-  'ecr-ebt-foodstamp-purchase': { ...mockSaleRequest },
-  'ecr-ebt-foodstamp-refund': { ...mockSaleRequest },
-  'ecr-ebt-cash-purchase': { ...mockSaleRequest },
+  'ecr-ebt-foodstamp-purchase': { ...mockBaseTransactionRequest },
+  'ecr-ebt-foodstamp-refund': { ...mockBaseTransactionRequest },
+  'ecr-ebt-cash-purchase': { ...mockBaseTransactionRequest },
   'ecr-ebt-cash-purchase-cashback': { ...mockSaleRequest, process_cashback: 'yes', amounts: { ...mockSaleRequest.amounts, cashback: '20.00' } },
-  'ecr-ebt-cash-withdrawal': { ...mockSaleRequest, amounts: { total: '100.00' } },
-  'ecr-ebt-balance-inquiry': { reference: '80', last_reference: '79', session_id: 'SESSION-ID', receipt_output: 'BOTH', manual_entry_indicator: 'no' },
-  'ecr-ebt-foodstamp-voucher': { ...mockSaleRequest, force_duplicate: 'no' },
-  'ecr-ebt-cash-voucher': { ...mockSaleRequest, force_duplicate: 'no' },
+  'ecr-ebt-cash-withdrawal': { ...mockBaseTransactionRequest, amounts: { total: '100.00' } },
+  'ecr-ebt-balance-inquiry': { reference: '80', last_reference: '79', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'BOTH', receipt_email: 'yes', manual_entry_indicator: 'no' },
+  'ecr-ebt-foodstamp-voucher': { ...mockBaseTransactionRequest, force_duplicate: 'no' },
+  'ecr-ebt-cash-voucher': { ...mockBaseTransactionRequest, force_duplicate: 'no' },
 
   // Refunds
-  'ecr-start-refund': { ...mockSaleRequest },
-  'ecr-start-ath-movil-refund': { ...mockSaleRequest, terminal_id: '30DR3473' },
+  'ecr-start-refund': { ...mockBaseTransactionRequest },
+  'ecr-start-ath-movil-refund': { ...mockBaseTransactionRequest, terminal_id: '30DR3473' },
 
   // Transaction Management
   'ecr-void': mockVoidRequest,
-  'ecr-tip-adjust': { reference: '50', last_reference: '49', session_id: 'SESSION-ID', target_reference: '49', tip: '5.00' },
+  'ecr-tip-adjust': { reference: '50', last_reference: '49', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', target_reference: '49', tip: '5.00' },
   'ecr-get-status': mockGetStatusRequest,
 
   // Cash
-  'ecr-start-cash': { ...mockSaleRequest },
-  'ecr-start-cash-refund': { ...mockSaleRequest },
+  'ecr-start-cash': { ...mockBaseTransactionRequest },
+  'ecr-start-cash-refund': { ...mockBaseTransactionRequest },
 
   // PreAuth
-  'ecr-start-preauth': { reference: '124', last_reference: '123', session_id: 'SESSION-ID', amounts: { total: '100.00' }, receipt_output: 'BOTH', manual_entry_indicator: 'no', force_duplicate: 'no' },
-  'ecr-completion': { reference: '125', last_reference: '124', session_id: 'SESSION-ID', target_reference: '124', amounts: { total: '100.00' }, force_duplicate: 'no', receipt_output: 'BOTH' },
+  'ecr-start-preauth': { reference: '124', last_reference: '123', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', amounts: { total: '100.00' }, receipt_output: 'BOTH', receipt_email: 'yes', manual_entry_indicator: 'no', force_duplicate: 'no' },
+  'ecr-completion': { reference: '125', last_reference: '124', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', target_reference: '124', amounts: { total: '100.00' }, force_duplicate: 'no', receipt_output: 'BOTH', receipt_email: 'yes' },
 
   // Settlement
   'ecr-settle': mockSettleRequest,
 
   // Reports
-  'ecr-journal': { reference: '54', last_reference: '53', session_id: 'SESSION-ID', target_reference: 'all' },
-  'ecr-detailed-report': { reference: '75', last_reference: '74', session_id: 'SESSION-ID', receipt_output: 'HTML' },
-  'ecr-totals-report': { reference: '79', last_reference: '75', session_id: 'SESSION-ID', receipt_output: 'HTML' },
+  'ecr-journal': { reference: '54', last_reference: '53', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', target_reference: 'all' },
+  'ecr-detailed-report': { reference: '75', last_reference: '74', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'HTML' },
+  'ecr-totals-report': { reference: '79', last_reference: '75', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'HTML' },
 
   // Device
-  'ecr-get-device-status': { reference: '56', last_reference: '55', session_id: 'SESSION-ID' },
-  'ecr-start-comm': { reference: '431', last_reference: '430', session_id: 'SESSION-ID', receipt_output: 'BOTH' },
-  'ecr-reprint': { reference: '120', last_reference: '119', session_id: 'SESSION-ID', receipt_output: 'BOTH' },
-  'ecr-custom-print': { reference: '20', last_reference: '19', session_id: 'SESSION-ID', receipt_output: 'Custom receipt text here' },
+  'ecr-get-device-status': { reference: '56', last_reference: '55', session_id: 'REPLACE-WITH-YOUR-SESSION-ID' },
+  'ecr-start-comm': { reference: '431', last_reference: '430', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'BOTH' },
+  'ecr-reprint': { reference: '120', last_reference: '119', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'BOTH' },
+  'ecr-custom-print': { reference: '20', last_reference: '19', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'Custom receipt text here' },
 
   // Signature
-  'ecr-get-signature': { reference: '56', last_reference: '55', session_id: 'SESSION-ID' },
-  'ecr-capture-signature': { reference: '200', last_reference: '199', session_id: 'SESSION-ID' },
+  'ecr-get-signature': { reference: '56', last_reference: '55', session_id: 'REPLACE-WITH-YOUR-SESSION-ID' },
+  'ecr-capture-signature': { reference: '200', last_reference: '199', session_id: 'REPLACE-WITH-YOUR-SESSION-ID' },
 
   // Verification
-  'ecr-card-verification': { reference: '220', last_reference: '219', session_id: 'SESSION-ID', force_duplicate: 'no', receipt_output: 'HTML', manual_entry_indicator: 'no' },
-  'ecr-confirmation-2opts': { reference: '210', last_reference: '206', session_id: 'SESSION-ID', line_1: 'Confirm?', line_2: 'Please select', option_1: 'Yes', option_2: 'No' },
-  'ecr-confirmation-multopts': { reference: '211', last_reference: '210', session_id: 'SESSION-ID', line_1: 'Select option', line_2: 'Choose one', option_1: 'Option 1', option_2: 'Option 2', option_3: 'Option 3' },
-  'ecr-data-request': { reference: '213', last_reference: '211', session_id: 'SESSION-ID', data_type: 'PHONE', information_requested: 'Enter phone number', default_value: '7871234567' },
-  'ecr-scan-code': { reference: '73', last_reference: '71', session_id: 'SESSION-ID' },
+  'ecr-card-verification': { reference: '220', last_reference: '219', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', force_duplicate: 'no', receipt_output: 'HTML', receipt_email: 'yes', manual_entry_indicator: 'no' },
+  'ecr-confirmation-2opts': { reference: '210', last_reference: '206', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', line_1: 'Confirm?', line_2: 'Please select', option_1: 'Yes', option_2: 'No' },
+  'ecr-confirmation-multopts': { reference: '211', last_reference: '210', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', line_1: 'Select option', line_2: 'Choose one', option_1: 'Option 1', option_2: 'Option 2', option_3: 'Option 3' },
+  'ecr-data-request': { reference: '213', last_reference: '211', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', data_type: 'PHONE', information_requested: 'Enter phone number', default_value: '7871234567' },
+  'ecr-scan-code': { reference: '73', last_reference: '71', session_id: 'REPLACE-WITH-YOUR-SESSION-ID' },
 
   // Display
-  'ecr-items-list': { reference: '71', last_reference: '70', session_id: 'SESSION-ID', title: 'Cart Items', products: [{ line_1_left: 'Product 1', line_1_right: '$10.00' }, { line_1_left: 'Product 2', line_1_right: '$20.00' }] },
+  'ecr-items-list': { reference: '71', last_reference: '70', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', title: 'Cart Items', products: [{ line_1_left: 'Product 1', line_1_right: '$10.00' }, { line_1_left: 'Product 2', line_1_right: '$20.00' }] },
 };
 
 export default function ApiPlayground() {
@@ -388,11 +404,31 @@ export default function ApiPlayground() {
                   className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm"
                 >
                   <option value="create-session-basic">Basic Payment</option>
-                  <option value="create-session-subscription">Subscription</option>
-                  <option value="create-session-partial">Partial Payment</option>
+                  <option value="create-session-recurring">Recurring Payment</option>
+                  <option value="create-session-subscription">Subscription (Tokenization Only)</option>
+                  <option value="create-session-partial">Partial Payment ⚠️ Requires Setup</option>
                 </select>
               )}
             </div>
+
+            {/* Partial Payment Warning */}
+            {selectedEndpoint === 'create-session' && selectedExample === 'create-session-partial' && (
+              <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <div className="flex items-start">
+                  <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-500 mt-0.5 mr-3 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <div>
+                    <h4 className="text-sm font-semibold text-yellow-800 dark:text-yellow-300 mb-1">
+                      Merchant Account Permissions May Be Required
+                    </h4>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                      While PlacetoPay documentation shows setting <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-800 rounded text-xs">allowPartial: true</code>, some merchant accounts may require additional permissions. If you receive an error stating &ldquo;Partial payment not allowed to your site&rdquo;, contact PlacetoPay support at <a href="mailto:soporte@placetopay.com" className="underline font-medium">soporte@placetopay.com</a> to verify your account has this feature enabled.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Path Parameters */}
             {selectedEndpoint === 'get-session' && (

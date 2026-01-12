@@ -37,7 +37,7 @@ export interface AmountDetail {
 
 export interface Tax {
   /** Tax type */
-  kind: 'valueAddedTax' | 'exciseDuty' | 'consumptionTax' | 'other';
+  kind: 'stateTax' | 'municipalTax' | 'reducedStateTax' | 'exciseDuty' | 'consumptionTax' | 'other';
   /** Tax amount */
   amount: number;
   /** Tax base amount */
@@ -180,8 +180,6 @@ export interface Person {
 }
 
 export interface CreateSessionRequest {
-  /** Session type: checkin (preauth) or payment */
-  type?: SessionType;
   /** Locale for the checkout interface (e.g., es_CO, en_US) */
   locale?: string;
   /** Payer information */

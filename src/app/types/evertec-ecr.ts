@@ -36,19 +36,30 @@ export type DataRequestType =
 
 /**
  * Transaction amounts breakdown
+ *
+ * IMPORTANT TAX REQUIREMENT (Puerto Rico Compliance):
+ * When using tax fields, you MUST provide BOTH base amounts AND calculated taxes:
+ * - base_state_tax + state_tax (for items subject to standard state tax rate)
+ * - base_reduced_tax + reduced_tax (for items subject to reduced state tax rate)
+ *
+ * Even if you have no items with reduced tax, you MUST include:
+ * base_reduced_tax: "0.00" and reduced_tax: "0.00"
+ *
+ * This is a terminal validation requirement. Omitting these fields will result in:
+ * Error: "AMOUNT FOR STATE REDUCED TAX NEEDED" (Approval Code: ZY)
  */
 export interface TransactionAmounts {
   /** Total transaction amount */
   total: string;
-  /** Base amount subject to state tax */
+  /** Base amount subject to standard state tax rate (requires base_reduced_tax if provided) */
   base_state_tax?: string;
-  /** Base amount subject to reduced tax */
+  /** Base amount subject to reduced state tax rate (required when base_state_tax is provided, use "0.00" if no reduced items) */
   base_reduced_tax?: string;
   /** Tip amount */
   tip?: string;
-  /** State tax amount */
+  /** Calculated state tax on base_state_tax (requires reduced_tax if provided) */
   state_tax?: string;
-  /** Reduced tax amount */
+  /** Calculated reduced tax on base_reduced_tax (required when state_tax is provided, use "0.00" if no reduced items) */
   reduced_tax?: string;
   /** City tax amount */
   city_tax?: string;

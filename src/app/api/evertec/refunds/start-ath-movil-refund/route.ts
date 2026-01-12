@@ -8,6 +8,7 @@ import { EVERTEC_ECR_ENDPOINTS } from '@/app/config/evertec-ecr';
 import {
   buildBaseRequest,
   validateRequiredFields,
+  validateTransactionAmounts,
   makeTerminalRequest,
   handleTerminalError,
   createApiDocumentation,
@@ -28,7 +29,6 @@ export async function POST(request: NextRequest) {
       receipt_output: body.receipt_output || 'BOTH',
       manual_entry_indicator: body.manual_entry_indicator || 'no',
       session_id: body.session_id,
-      ...body,
     };
 
     const required = ['reference', 'last_reference', 'session_id', 'amounts'];
@@ -46,6 +46,12 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       );
+    }
+
+    // Validate Puerto Rico tax compliance
+    const taxValidation = validateTransactionAmounts(payload.amounts);
+    if (!taxValidation.valid) {
+      return taxValidation.error!;
     }
 
     const { data, status } = await makeTerminalRequest<TransactionResponse>(
@@ -76,8 +82,28 @@ export async function GET() {
           required: ['total'],
           properties: {
             total: { type: 'string', example: '100.00', required: true },
-            base_state_tax: { type: 'string', example: '90.00' },
-            state_tax: { type: 'string', example: '10.00' },
+            base_state_tax: {
+              type: 'string',
+              description: 'Base amount subject to standard state tax rate (requires base_reduced_tax if provided)',
+              example: '90.00',
+            },
+            base_reduced_tax: {
+              type: 'string',
+              description: 'Base amount subject to reduced state tax rate (required when base_state_tax is provided, use "0.00" if no reduced items)',
+              example: '0.00',
+            },
+            state_tax: {
+              type: 'string',
+              description: 'Calculated state tax on base_state_tax (requires reduced_tax if provided)',
+              example: '9.45',
+            },
+            reduced_tax: {
+              type: 'string',
+              description: 'Calculated reduced tax on base_reduced_tax (required when state_tax is provided, use "0.00" if no reduced items)',
+              example: '0.00',
+            },
+            tip: { type: 'string', example: '0.00' },
+            city_tax: { type: 'string', example: '0.55' },
           },
         },
         receipt_output: { type: 'string', enum: ['BOTH', 'HTML', 'PRINTER', 'NONE'], default: 'BOTH' },
@@ -92,6 +118,13 @@ export async function GET() {
         terminal_id: '30DR3478',
       },
     },
-    notes: ['Processes an ATH Móvil refund transaction'],
+    notes: [
+      'Processes an ATH Móvil refund transaction',
+      'IMPORTANT TAX REQUIREMENT: When using tax fields, you MUST provide BOTH pairs:',
+      '  - base_state_tax + state_tax (standard rate)',
+      '  - base_reduced_tax + reduced_tax (reduced rate)',
+      '  Even if you have no reduced tax items, set base_reduced_tax="0.00" and reduced_tax="0.00"',
+      '  This is a terminal validation requirement for Puerto Rico tax compliance',
+    ],
   });
 }

@@ -1,73 +1,52 @@
 /**
- * POST /api/checkout/create-session
+ * POST /api/placetopay/checkout/create-session
  * Creates a new checkout session with PlacetoPay
  * Based on: https://docs.placetopay.dev/checkout/create-session/
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateAuth } from '@/app/auth/evertec-auth';
-import { getEvertecConfig, EVERTEC_ENDPOINTS } from '@/app/config/evertec';
-import type {
-  CreateSessionRequest,
-  CreateSessionResponse,
-  EvertecError,
-} from '@/app/types/evertec';
+import {
+  validateSessionRequest,
+  createCheckoutSession,
+  isPlacetopayError,
+  handlePlacetopayError,
+} from '@/app/lib/placetopay-helpers';
+import type { CreateSessionRequest } from '@/app/types/evertec';
 
 export async function POST(request: NextRequest) {
   try {
-    // Parse request body
-    const body = await request.json();
+    // Parse request body - client must provide auth
+    const body: CreateSessionRequest = await request.json();
 
-    // Get configuration
-    const config = getEvertecConfig();
-
-    // Generate authentication
-    const auth = generateAuth(config.login, config.secretKey);
-
-    // Build complete request payload
-    const payload: CreateSessionRequest = {
-      ...body,
-      auth,
-    };
-
-    // Validate required fields
-    if (!payload.payment && !payload.subscription) {
+    // Validate auth is present
+    if (!body.auth) {
       return NextResponse.json(
         {
-          error: 'Either payment or subscription must be provided',
+          error: 'Authentication required',
+          message: 'The "auth" object is required in the request body. Clients must generate their own auth credentials.',
         },
         { status: 400 }
       );
     }
 
-    // Make request to PlacetoPay API
-    const response = await fetch(`${config.baseUrl}${EVERTEC_ENDPOINTS.CREATE_SESSION}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    // Validate request
+    const validation = validateSessionRequest(body);
+    if (!validation.valid) {
+      return validation.error!;
+    }
 
-    const data: CreateSessionResponse | EvertecError = await response.json();
+    // Create session (auth is already in body from client)
+    const { data, status } = await createCheckoutSession(body);
 
     // Check if response is an error
-    if ('status' in data && (data.status.status === 'ERROR' || data.status.status === 'FAILED')) {
-      return NextResponse.json(data, { status: response.status });
+    if (isPlacetopayError(data)) {
+      return NextResponse.json(data, { status });
     }
 
     // Return successful response
-    return NextResponse.json(data, { status: response.status });
+    return NextResponse.json(data, { status });
   } catch (error) {
-    console.error('Error creating checkout session:', error);
-
-    return NextResponse.json(
-      {
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handlePlacetopayError(error);
   }
 }
 
@@ -79,17 +58,39 @@ export async function GET() {
   return NextResponse.json({
     endpoint: '/api/checkout/create-session',
     method: 'POST',
-    description: 'Creates a new checkout session with PlacetoPay/Evertec',
+    description: 'Creates a new checkout session with PlacetoPay/Evertec. This is a middleware - clients must provide their own auth credentials.',
     documentation: 'https://docs.placetopay.dev/checkout/create-session/',
+    notes: [
+      'This is a MIDDLEWARE endpoint - clients must generate and provide their own auth object',
+      'Use the generateAuth helper from @/app/auth/evertec-auth.ts to create auth credentials',
+      'Auth must include: login, tranKey (Base64(SHA-256(nonce + seed + secretKey))), nonce (Base64), and seed (ISO 8601)',
+    ],
     requestBody: {
       type: 'object',
-      required: ['payment or subscription'],
+      required: ['auth', 'payment or subscription'],
       properties: {
-        type: {
-          type: 'string',
-          enum: ['checkin', 'payment'],
-          description: 'Session type: checkin (preauth) or payment',
-          default: 'payment',
+        auth: {
+          type: 'object',
+          required: ['login', 'tranKey', 'nonce', 'seed'],
+          description: 'Authentication credentials - clients must generate this',
+          properties: {
+            login: {
+              type: 'string',
+              description: 'Client login identifier',
+            },
+            tranKey: {
+              type: 'string',
+              description: 'Base64(SHA-256(nonce + seed + secretKey))',
+            },
+            nonce: {
+              type: 'string',
+              description: 'Base64-encoded random value',
+            },
+            seed: {
+              type: 'string',
+              description: 'Current timestamp in ISO 8601 format',
+            },
+          },
         },
         locale: {
           type: 'string',

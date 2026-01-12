@@ -1,13 +1,15 @@
 /**
- * POST /api/checkout/get-session/[requestId]
+ * POST /api/placetopay/checkout/get-session/[requestId]
  * Retrieves the status of a checkout session
  * Based on: https://docs.placetopay.dev/checkout/how-checkout-works/
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateAuth } from '@/app/auth/evertec-auth';
-import { getEvertecConfig, EVERTEC_ENDPOINTS } from '@/app/config/evertec';
-import type { GetSessionResponse, EvertecError } from '@/app/types/evertec';
+import {
+  getCheckoutSessionStatus,
+  isPlacetopayError,
+  handlePlacetopayError,
+} from '@/app/lib/placetopay-helpers';
 
 export async function POST(
   request: NextRequest,
@@ -27,48 +29,32 @@ export async function POST(
       );
     }
 
-    // Get configuration
-    const config = getEvertecConfig();
+    // Parse request body - client must provide auth
+    const body = await request.json();
 
-    // Generate authentication
-    const auth = generateAuth(config.login, config.secretKey);
-
-    // Build request payload
-    const payload = {
-      auth,
-    };
-
-    // Make request to PlacetoPay API
-    const response = await fetch(
-      `${config.baseUrl}${EVERTEC_ENDPOINTS.GET_SESSION}/${requestId}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+    // Validate auth is present
+    if (!body.auth) {
+      return NextResponse.json(
+        {
+          error: 'Authentication required',
+          message: 'The "auth" object is required in the request body. Clients must generate their own auth credentials.',
         },
-        body: JSON.stringify(payload),
-      }
-    );
+        { status: 400 }
+      );
+    }
 
-    const data: GetSessionResponse | EvertecError = await response.json();
+    // Get session status (pass auth from client)
+    const { data, status } = await getCheckoutSessionStatus(requestId, body.auth);
 
     // Check if response is an error
-    if ('status' in data && (data.status.status === 'ERROR' || data.status.status === 'FAILED')) {
-      return NextResponse.json(data, { status: response.status });
+    if (isPlacetopayError(data)) {
+      return NextResponse.json(data, { status });
     }
 
     // Return successful response
-    return NextResponse.json(data, { status: response.status });
+    return NextResponse.json(data, { status });
   } catch (error) {
-    console.error('Error retrieving session:', error);
-
-    return NextResponse.json(
-      {
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handlePlacetopayError(error);
   }
 }
 
@@ -85,8 +71,12 @@ export async function GET(
   return NextResponse.json({
     endpoint: `/api/checkout/get-session/${requestId}`,
     method: 'POST',
-    description: 'Retrieves the status of a checkout session',
+    description: 'Retrieves the status of a checkout session. This is a middleware - clients must provide their own auth credentials.',
     documentation: 'https://docs.placetopay.dev/checkout/how-checkout-works/',
+    notes: [
+      'This is a MIDDLEWARE endpoint - clients must provide auth in the request body',
+      'Use the same auth credentials that were used to create the session',
+    ],
     parameters: {
       requestId: {
         type: 'number',
@@ -96,7 +86,32 @@ export async function GET(
     },
     requestBody: {
       type: 'object',
-      description: 'Authentication is automatically added by the API',
+      required: ['auth'],
+      properties: {
+        auth: {
+          type: 'object',
+          required: ['login', 'tranKey', 'nonce', 'seed'],
+          description: 'Authentication credentials - must be provided by client',
+          properties: {
+            login: {
+              type: 'string',
+              description: 'Client login identifier',
+            },
+            tranKey: {
+              type: 'string',
+              description: 'Base64(SHA-256(nonce + seed + secretKey))',
+            },
+            nonce: {
+              type: 'string',
+              description: 'Base64-encoded random value',
+            },
+            seed: {
+              type: 'string',
+              description: 'Current timestamp in ISO 8601 format',
+            },
+          },
+        },
+      },
     },
     responseBody: {
       type: 'object',

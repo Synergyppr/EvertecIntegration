@@ -1,6 +1,16 @@
 /**
  * Evertec ECR Mockup Data
  * Sample request/response data for testing and development
+ *
+ * All mock data uses the terminal configuration from .env file:
+ * - terminal_id: 40000260
+ * - station_number: 1234
+ * - cashier_id: 123
+ *
+ * For testing in API Playground:
+ * 1. Start with Terminal Logon to get a session_id
+ * 2. Replace "REPLACE-WITH-YOUR-SESSION-ID" with your actual session_id
+ * 3. All other fields are pre-filled and validated
  */
 
 import type {
@@ -20,53 +30,79 @@ import type {
 // ============================================================================
 
 export const mockLogonRequest: LogonRequest = {
-  terminal_id: '30DR3479',
+  terminal_id: '40000260',
   station_number: '1234',
-  cashier_id: '0001',
+  cashier_id: '123',
   reference: '100',
   last_reference: '99',
 };
 
 export const mockLogonResponse: LogonResponse = {
   reference: '100',
-  terminal_vid: '30DR3479',
+  terminal_vid: '40000260',
   approval_code: '00',
   station_number: '1234',
-  cashier_id: '0001',
+  cashier_id: '123',
   last_reference: '99',
   response_message: 'APPROVED.',
   session_id: 'T5ODA-GN4JR-I2FLV-VQAX8',
   merchant_id: '4549102820016',
-  terminal_id: '30DR3479',
+  terminal_id: '40000260',
 };
 
 // ============================================================================
 // SALE TRANSACTION MOCKUPS
 // ============================================================================
 
-export const mockSaleRequest: StartSaleRequest = {
-  terminal_id: '30DR3479',
+/**
+ * Base mock request for operations that don't require process_cashback
+ * Use this for: refunds, cash transactions, EBT purchases, vouchers, etc.
+ */
+export const mockBaseTransactionRequest = {
+  terminal_id: '40000260',
   station_number: '1234',
-  cashier_id: '1234',
+  cashier_id: '123',
   reference: '67',
   last_reference: '66',
-  receipt_email: 'yes',
-  process_cashback: 'no',
+  receipt_email: 'yes' as const,
   amounts: {
     total: '180.05',
     base_state_tax: '100.00',
+    base_reduced_tax: '0.00',
     tip: '0.00',
     state_tax: '10.50',
+    reduced_tax: '0.00',
     city_tax: '1.50',
   },
-  receipt_output: 'BOTH',
-  manual_entry_indicator: 'no',
-  session_id: 'Q9QS9-WDNEX-I9LC2-4UMHZ',
+  receipt_output: 'BOTH' as const,
+  manual_entry_indicator: 'no' as const,
+  session_id: 'REPLACE-WITH-YOUR-SESSION-ID',
+};
+
+/**
+ * Mock sale request with complete, validated fields
+ *
+ * IMPORTANT TAX REQUIREMENTS:
+ * When using tax fields, you MUST provide BOTH base amounts AND calculated tax amounts:
+ * - base_state_tax + state_tax (for standard tax rate items)
+ * - base_reduced_tax + reduced_tax (for reduced tax rate items)
+ * Even if you don't have reduced tax items, set both to "0.00"
+ *
+ * This is a terminal validation requirement for Puerto Rico tax compliance.
+ *
+ * To test:
+ * 1. Run Terminal Logon to get a session_id
+ * 2. Replace the session_id in this mock with your actual session_id
+ * 3. Execute this request
+ */
+export const mockSaleRequest: StartSaleRequest = {
+  ...mockBaseTransactionRequest,
+  process_cashback: 'no',
 };
 
 export const mockSaleResponse: TransactionResponse = {
   approval_code: 'ST',
-  cashier_id: '1234',
+  cashier_id: '123',
   manual_entry_indicator: 'no',
   session_id: 'OFQRY-4IF8L-BL0RQ-Y6HFJ',
   process_cashback: 'no',
@@ -76,15 +112,17 @@ export const mockSaleResponse: TransactionResponse = {
   amounts: {
     total: '180.05',
     base_state_tax: '100.00',
+    base_reduced_tax: '0.00',
     tip: '0.00',
     state_tax: '10.50',
+    reduced_tax: '0.00',
     city_tax: '1.50',
   },
   receipt_output: 'BOTH',
   last_reference: '66',
   response_message: 'SENDING TRANSACTION ID.',
   receipt_email: 'yes',
-  terminal_id: '30DR3478',
+  terminal_id: '40000260',
 };
 
 // ============================================================================
@@ -92,14 +130,14 @@ export const mockSaleResponse: TransactionResponse = {
 // ============================================================================
 
 export const mockVoidRequest: VoidRequest = {
-  terminal_id: '30DR3479',
+  terminal_id: '40000260',
   station_number: '1234',
-  cashier_id: '1234',
+  cashier_id: '123',
   reference: '50',
   last_reference: '49',
   receipt_output: 'BOTH',
   receipt_email: 'yes',
-  session_id: 'D8EXL-VTL0W-BK6I3-CAVB4',
+  session_id: 'REPLACE-WITH-YOUR-SESSION-ID',
   target_reference: '2',
 };
 
@@ -108,11 +146,11 @@ export const mockVoidRequest: VoidRequest = {
 // ============================================================================
 
 export const mockGetStatusRequest: GetTransactionStatusRequest = {
-  session_id: 'GRR3V-9J79T-ZORYE-QG2EL',
-  terminal_id: '30DR3478',
-  station_number: '12345',
-  cashier_id: '12345',
-  trx_id: '88ed279d-5580-4b83-8ab9-9044d685dd2e',
+  session_id: 'REPLACE-WITH-YOUR-SESSION-ID',
+  terminal_id: '40000260',
+  station_number: '1234',
+  cashier_id: '123',
+  trx_id: 'REPLACE-WITH-YOUR-TRX-ID',
 };
 
 export const mockGetStatusPendingResponse: GetTransactionStatusResponse = {
@@ -129,16 +167,18 @@ export const mockGetStatusApprovedResponse: GetTransactionStatusResponse = {
     approval_code: '00',
     reference: '67',
     trx_id: '88ed279d-5580-4b83-8ab9-9044d685dd2e',
-    terminal_id: '30DR3478',
+    terminal_id: '40000260',
     station_number: '1234',
-    cashier_id: '1234',
+    cashier_id: '123',
     last_reference: '66',
     response_message: 'APPROVED',
     amounts: {
       total: '180.05',
       base_state_tax: '100.00',
+      base_reduced_tax: '0.00',
       tip: '0.00',
       state_tax: '10.50',
+      reduced_tax: '0.00',
       city_tax: '1.50',
     },
     receipt_output: 'BOTH',
@@ -159,11 +199,11 @@ export const mockGetStatusRejectedResponse: GetTransactionStatusResponse = {
 // ============================================================================
 
 export const mockSettleRequest: StartSettleRequest = {
-  terminal_id: '30DR3478',
+  terminal_id: '40000260',
   station_number: '1234',
-  cashier_id: '1234',
+  cashier_id: '123',
   reference: '13',
-  session_id: 'KHVTN-7WMQN-TZ3J0-SRH6Z',
+  session_id: 'REPLACE-WITH-YOUR-SESSION-ID',
   receipt_output: 'BOTH',
   last_reference: '12',
 };
@@ -171,9 +211,9 @@ export const mockSettleRequest: StartSettleRequest = {
 export const mockSettleResponse: StartSettleResponse = {
   reference: '13',
   approval_code: '00',
-  terminal_id: '30DR3478',
+  terminal_id: '40000260',
   station_number: '1234',
-  cashier_id: '1234',
+  cashier_id: '123',
   last_reference: '12',
   response_message: 'SETTLEMENT APPROVED',
   session_id: 'KHVTN-7WMQN-TZ3J0-SRH6Z',
@@ -249,19 +289,25 @@ export const mockAmounts = {
   withTaxes: {
     total: '180.05',
     base_state_tax: '100.00',
+    base_reduced_tax: '0.00',
     state_tax: '10.50',
+    reduced_tax: '0.00',
     city_tax: '1.50',
   },
   withTip: {
     total: '225.00',
     base_state_tax: '200.00',
+    base_reduced_tax: '0.00',
     state_tax: '20.00',
+    reduced_tax: '0.00',
     tip: '5.00',
   },
   withCashback: {
     total: '150.00',
     base_state_tax: '130.00',
+    base_reduced_tax: '0.00',
     state_tax: '15.00',
+    reduced_tax: '0.00',
     cashback: '20.00',
   },
   complex: {
@@ -280,24 +326,24 @@ export const mockAmounts = {
  */
 export const mockTerminalConfigs = {
   default: {
-    terminal_id: '30DR3479',
+    terminal_id: '40000260',
     station_number: '1234',
-    cashier_id: '0001',
+    cashier_id: '123',
   },
   alternativeStation: {
-    terminal_id: '30DR3479',
+    terminal_id: '40000260',
     station_number: '5678',
     cashier_id: '0002',
   },
   athMovilTerminal: {
     terminal_id: '30DR3473',
     station_number: '1234',
-    cashier_id: '0001',
+    cashier_id: '123',
   },
   ebtTerminal: {
     terminal_id: '30DR3478',
     station_number: '1234',
-    cashier_id: '0001',
+    cashier_id: '123',
   },
 };
 

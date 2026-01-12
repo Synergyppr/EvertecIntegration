@@ -18,37 +18,33 @@ import type {
 // ============================================================================
 
 export const dummyPayer: Person = {
-  documentType: 'CC',
-  document: '1234567890',
-  name: 'John',
-  surname: 'Doe',
-  email: 'john.doe@example.com',
-  mobile: '+573001234567',
+  name: 'Juan',
+  surname: 'Rivera',
+  email: 'juan.rivera@example.com',
+  mobile: '+17871234567',
   address: {
-    street: '123 Main Street',
-    city: 'Bogotá',
-    state: 'Cundinamarca',
-    postalCode: '110111',
-    country: 'CO',
-    phone: '+573001234567',
+    street: '123 Calle Principal',
+    city: 'San Juan',
+    state: 'PR',
+    postalCode: '00901',
+    country: 'US',
+    phone: '+17871234567',
   },
 };
 
 export const dummyBuyer: Person = {
-  documentType: 'CC',
-  document: '9876543210',
-  name: 'Jane',
-  surname: 'Smith',
-  company: 'ACME Corp',
-  email: 'jane.smith@example.com',
-  mobile: '+573009876543',
+  name: 'Maria',
+  surname: 'González',
+  company: 'Caribbean Business Solutions Inc',
+  email: 'maria.gonzalez@example.com',
+  mobile: '+17879876543',
   address: {
-    street: '456 Business Ave',
-    city: 'Medellín',
-    state: 'Antioquia',
-    postalCode: '050001',
-    country: 'CO',
-    phone: '+573009876543',
+    street: '456 Avenida Ponce de León',
+    city: 'Guaynabo',
+    state: 'PR',
+    postalCode: '00968',
+    country: 'US',
+    phone: '+17879876543',
   },
 };
 
@@ -57,22 +53,32 @@ export const dummyBuyer: Person = {
 // ============================================================================
 
 export const dummyBasicPayment: Payment = {
-  reference: `TEST-${Date.now()}`,
-  description: 'Test Payment - Basic Checkout',
+  reference: `PR-${Date.now()}`,
+  description: 'Basic Payment - Puerto Rico',
   amount: {
-    currency: 'COP',
-    total: 100000,
+    currency: 'USD',
+    total: 125.00,
     taxes: [
       {
-        kind: 'valueAddedTax',
-        amount: 19000,
-        base: 81000,
+        kind: 'stateTax',
+        amount: 11.50,
+        base: 100.00,
+      },
+      {
+        kind: 'municipalTax',
+        amount: 6.00,
+        base: 100.00,
+      },
+      {
+        kind: 'reducedStateTax',
+        amount: 7.50,
+        base: 100.00,
       },
     ],
     details: [
       {
         kind: 'subtotal',
-        amount: 81000,
+        amount: 100.00,
       },
       {
         kind: 'shipping',
@@ -84,28 +90,45 @@ export const dummyBasicPayment: Payment = {
 };
 
 export const dummyPartialPayment: Payment = {
-  reference: `TEST-PARTIAL-${Date.now()}`,
-  description: 'Test Payment - Partial Payments Allowed',
+  reference: `PR-PARTIAL-${Date.now()}`,
+  description: 'Large Purchase - Partial Payments Allowed (Puerto Rico)',
   amount: {
-    currency: 'COP',
-    total: 500000,
-    taxes: [
-      {
-        kind: 'valueAddedTax',
-        amount: 95000,
-        base: 405000,
-      },
-    ],
+    currency: 'USD',
+    total: 5000.00,
+    // Note: Taxes are not allowed with partial payments per PlacetoPay documentation
   },
   allowPartial: true,
 };
 
 export const dummyRecurringPayment: Payment = {
-  reference: `TEST-RECURRING-${Date.now()}`,
-  description: 'Test Payment - Monthly Subscription',
+  reference: `PR-RECURRING-${Date.now()}`,
+  description: 'Monthly Membership Fee - Puerto Rico',
   amount: {
     currency: 'USD',
-    total: 29.99,
+    total: 35.00,
+    taxes: [
+      {
+        kind: 'stateTax',
+        amount: 1.50,
+        base: 30.00,
+      },
+      {
+        kind: 'municipalTax',
+        amount: 1.80,
+        base: 30.00,
+      },
+      {
+        kind: 'reducedStateTax',
+        amount: 1.70,
+        base: 30.00,
+      },
+    ],
+    details: [
+      {
+        kind: 'subtotal',
+        amount: 30.00,
+      },
+    ],
   },
   recurring: {
     periodicity: 'M',
@@ -124,12 +147,74 @@ export const dummyUSDPayment: Payment = {
     total: 150.50,
     taxes: [
       {
-        kind: 'valueAddedTax',
-        amount: 28.59,
+        kind: 'stateTax',
+        amount: 15.00,
+        base: 121.91,
+      },
+      {
+        kind: 'municipalTax',
+        amount: 7.50,
+        base: 121.91,
+      },
+      {
+        kind: 'reducedStateTax',
+        amount: 6.09,
         base: 121.91,
       },
     ],
   },
+};
+
+export const dummyDispersionPayment: Payment = {
+  reference: `TEST-DISPERSION-${Date.now()}`,
+  description: 'Test Payment - Dispersion (Multiple Merchants)',
+  amount: {
+    currency: 'COP',
+    total: 300000,
+  },
+  dispersion: [
+    {
+      agreement: 'MERCHANT-1',
+      amount: {
+        currency: 'COP',
+        total: 200000,
+      },
+    },
+    {
+      agreement: 'MERCHANT-2',
+      amount: {
+        currency: 'COP',
+        total: 100000,
+      },
+    },
+  ],
+};
+
+export const dummyPaymentWithSubscription: Payment = {
+  reference: `PR-PAY-SUB-${Date.now()}`,
+  description: 'Payment with Optional Subscription - Puerto Rico',
+  amount: {
+    currency: 'USD',
+    total: 55.00,
+    taxes: [
+      {
+        kind: 'stateTax',
+        amount: 2.50,
+        base: 47.00,
+      },
+      {
+        kind: 'municipalTax',
+        amount: 2.82,
+        base: 47.00,
+      },
+      {
+        kind: 'reducedStateTax',
+        amount: 2.68,
+        base: 47.00,
+      },
+    ],
+  },
+  subscribe: true, // Allows user to opt-in to save payment method
 };
 
 // ============================================================================
@@ -137,49 +222,128 @@ export const dummyUSDPayment: Payment = {
 // ============================================================================
 
 export const dummySubscription: Subscription = {
-  reference: `TEST-SUB-${Date.now()}`,
-  description: 'Test Subscription - Payment Method Tokenization',
+  reference: `PR-SUB-${Date.now()}`,
+  description: 'Payment Method Tokenization - Puerto Rico',
 };
 
 // ============================================================================
 // DUMMY SESSION REQUESTS
 // ============================================================================
 
-export const dummyBasicCheckoutRequest: Omit<CreateSessionRequest, 'auth'> = {
-  type: 'payment',
-  locale: 'es_CO',
-  payer: dummyPayer,
-  payment: dummyBasicPayment,
-  returnUrl: 'https://yoursite.com/payment/return',
-  cancelUrl: 'https://yoursite.com/payment/cancel',
-  ipAddress: '192.168.1.1',
-  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-  expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-  captureAddress: false,
-  skipResult: false,
+/**
+ * Generates a dummy auth object for testing
+ * NOTE: Clients should generate real auth using the generateAuth helper
+ */
+export function generateDummyAuth() {
+  return {
+    login: 'test_login',
+    tranKey: 'dGVzdF90cmFuS2V5X2V4YW1wbGU=', // Example Base64
+    nonce: 'ZHVtbXlfbm9uY2U=', // Example Base64
+    seed: new Date().toISOString(),
+  };
+}
+
+export const dummyBasicCheckoutRequest: CreateSessionRequest = {
+  auth: {
+    login: 'test_login',
+    tranKey: 'dGVzdF90cmFuS2V5X2V4YW1wbGU=',
+    nonce: 'ZHVtbXlfbm9uY2U=',
+    seed: '2026-01-08T18:30:38.290Z',
+  },
+  locale: 'en_US',
+  payer: {
+    name: 'John',
+    surname: 'Doe',
+    email: 'John.Doe@syn.paulsonpuertorico.com',
+  },
+  payment: {
+    reference: 'Golf-Course-1750',
+    description: 'BBR 18 Holes Golf Course',
+    amount: {
+      currency: 'USD',
+      total: 17.50,
+      taxes: [
+        {
+          kind: 'stateTax',
+          amount: 0.95,
+          base: 15.70,
+        },
+        {
+          kind: 'municipalTax',
+          amount: 0.47,
+          base: 15.70,
+        },
+        {
+          kind: 'reducedStateTax',
+          amount: 0.38,
+          base: 15.70,
+        },
+      ],
+    },
+  },
+  returnUrl: 'https://puertorico-merchant.com/payment/return',
+  ipAddress: '66.50.0.1', // Puerto Rico IP range
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
 };
 
-export const dummySubscriptionRequest: Omit<CreateSessionRequest, 'auth'> = {
-  type: 'payment',
+/**
+ * Recurring payment request (payment with recurring config)
+ * Note: Use dummySubscriptionOnlyRequest for tokenization without payment
+ */
+export const dummySubscriptionRequest: CreateSessionRequest = {
+  auth: generateDummyAuth(),
   locale: 'en_US',
   payer: dummyPayer,
   payment: dummyRecurringPayment,
-  subscription: dummySubscription,
-  returnUrl: 'https://yoursite.com/subscription/return',
+  returnUrl: 'https://puertorico-merchant.com/subscription/return',
+  notificationUrl: 'https://puertorico-merchant.com/api/placetopay/notifications',
+  ipAddress: '66.50.0.1',
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+};
+
+export const dummyPartialPaymentRequest: CreateSessionRequest = {
+  auth: generateDummyAuth(),
+  locale: 'en_US',
+  payer: dummyPayer,
+  buyer: dummyBuyer,
+  payment: dummyPartialPayment,
+  returnUrl: 'https://puertorico-merchant.com/payment/return',
+  notificationUrl: 'https://puertorico-merchant.com/api/placetopay/notifications',
+  ipAddress: '66.50.0.1',
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+};
+
+export const dummyDispersionRequest: CreateSessionRequest = {
+  auth: generateDummyAuth(),
+  locale: 'es_CO',
+  payer: dummyPayer,
+  payment: dummyDispersionPayment,
+  returnUrl: 'https://yoursite.com/payment/return',
+  notificationUrl: 'https://yoursite.com/api/placetopay/notifications',
   ipAddress: '192.168.1.1',
   userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
 };
 
-export const dummyPartialPaymentRequest: Omit<CreateSessionRequest, 'auth'> = {
-  type: 'payment',
-  locale: 'es_CO',
+export const dummyPreAuthRequest: CreateSessionRequest = {
+  auth: generateDummyAuth(),
+  locale: 'en_US',
   payer: dummyPayer,
-  buyer: dummyBuyer,
-  payment: dummyPartialPayment,
-  returnUrl: 'https://yoursite.com/payment/return',
-  notificationUrl: 'https://yoursite.com/api/notifications',
+  payment: dummyUSDPayment,
+  returnUrl: 'https://yoursite.com/preauth/return',
+  notificationUrl: 'https://yoursite.com/api/placetopay/notifications',
   ipAddress: '192.168.1.1',
   userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+};
+
+export const dummySubscriptionOnlyRequest: CreateSessionRequest = {
+  auth: generateDummyAuth(),
+  locale: 'en_US',
+  payer: dummyPayer,
+  subscription: dummySubscription,
+  returnUrl: 'https://puertorico-merchant.com/subscription/return',
+  notificationUrl: 'https://puertorico-merchant.com/api/placetopay/notifications',
+  ipAddress: '66.50.0.1',
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
 };
 
 // ============================================================================
