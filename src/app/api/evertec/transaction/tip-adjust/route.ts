@@ -14,7 +14,7 @@ import {
 } from '@/app/lib/evertec-ecr-helpers';
 import type {
   TipAdjustRequest,
-  TransactionResponse,
+  TipAdjustResponse,
 } from '@/app/types/evertec-ecr';
 
 export async function POST(request: NextRequest) {
@@ -23,24 +23,19 @@ export async function POST(request: NextRequest) {
 
     const payload: TipAdjustRequest = {
       ...buildBaseRequest(body),
-      receipt_email: body.receipt_email || 'yes',
-      
-      receipt_output: body.receipt_output || 'BOTH',
-      manual_entry_indicator: body.manual_entry_indicator || 'no',
+      target_reference: body.target_reference,
+      tip: body.tip,
       session_id: body.session_id,
-      ...body,
     };
 
-    const required = ['reference', 'last_reference', 'session_id'];
+    const required = ['reference', 'last_reference', 'session_id', 'target_reference', 'tip'];
     const validation = validateRequiredFields(payload, required);
 
     if (!validation.valid) {
       return validation.error!;
     }
 
-    
-
-    const { data, status } = await makeTerminalRequest<TransactionResponse>(
+    const { data, status } = await makeTerminalRequest<TipAdjustResponse>(
       EVERTEC_ECR_ENDPOINTS.TIP_ADJUST,
       payload
     );
@@ -57,25 +52,36 @@ export async function GET() {
     description: 'Adjusts tip on a completed transaction',
     requestBody: {
       type: 'object',
-      required: ['reference', 'last_reference', 'session_id'],
+      required: ['reference', 'last_reference', 'session_id', 'target_reference', 'tip'],
       properties: {
-        reference: { type: 'string', example: '100', required: true },
-        last_reference: { type: 'string', example: '99', required: true },
-        session_id: { type: 'string', example: 'SESSION-ID-HERE', required: true },
-        receipt_email: { type: 'string', enum: ['yes', 'no'], default: 'yes' },
-        
-        receipt_output: { type: 'string', enum: ['BOTH', 'HTML', 'PRINTER', 'NONE'], default: 'BOTH' },
-        manual_entry_indicator: { type: 'string', enum: ['yes', 'no'], default: 'no' },
+        terminal_id: { type: 'string', example: '40000260', description: 'Terminal ID (optional, uses env default)' },
+        station_number: { type: 'string', example: '1234', description: 'Station number (optional, uses env default)' },
+        cashier_id: { type: 'string', example: '123', description: 'Cashier ID (optional, uses env default)' },
+        reference: { type: 'string', example: '13', required: true, description: 'Current transaction reference' },
+        last_reference: { type: 'string', example: '12', required: true, description: 'Previous transaction reference' },
+        session_id: { type: 'string', example: 'KC0P6-UHTD9-4RP5L-S4O0R', required: true, description: 'Session ID from logon' },
+        target_reference: { type: 'string', example: '4', required: true, description: 'Reference of transaction to adjust' },
+        tip: { type: 'string', example: '5.00', required: true, description: 'New tip amount' },
       },
     },
     responseBody: {
       success: {
-        reference: '100',
+        reference: '13',
+        last_reference: '12',
+        target_reference: '4',
+        tip: '5.00',
         approval_code: '00',
         response_message: 'APPROVED',
-        terminal_id: '30DR3478',
+        terminal_id: '40000260',
+        station_number: '1234',
+        cashier_id: '123',
+        session_id: 'KC0P6-UHTD9-4RP5L-S4O0R',
       },
     },
-    notes: ['Adjusts tip on a completed transaction'],
+    notes: [
+      'Adjusts tip on a completed transaction',
+      'target_reference must be the reference of an existing approved transaction',
+      'tip amount should be in decimal format (e.g., "5.00")',
+    ],
   });
 }
