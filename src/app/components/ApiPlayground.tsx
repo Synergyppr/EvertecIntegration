@@ -16,7 +16,14 @@ import {
   mockGetStatusRequest,
   mockSettleRequest,
 } from '../mockup/evertec-ecr-mockup';
+import {
+  exampleVISAandATHMovilSplit,
+  example5050Split,
+  exampleStatusCheckRequest,
+} from '../mockup/split-payment-examples';
 import type { CreateSessionRequest } from '../types/evertec';
+import type { TransactionAmounts } from '../types/evertec-ecr';
+import { AmountManager } from './AmountManager';
 
 interface ApiEndpoint {
   id: string;
@@ -48,6 +55,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
   // Evertec ECR - Sales
   { id: 'ecr-start-sale', name: 'Start Sale', method: 'POST', path: '/api/evertec/sales/start-sale', description: 'Standard card payment', category: 'Evertec ECR - Sales' },
   { id: 'ecr-start-ath-movil-sale', name: 'Start ATH Móvil Sale', method: 'POST', path: '/api/evertec/sales/start-ath-movil-sale', description: 'ATH Móvil payment', category: 'Evertec ECR - Sales' },
+  { id: 'ecr-split-payment', name: '💳 Split Payment (Multi-Part)', method: 'POST', path: '/api/evertec/sales/split-payment', description: 'Split transaction across multiple payments', category: 'Evertec ECR - Sales' },
 
   // Evertec ECR - EBT (8 endpoints)
   { id: 'ecr-ebt-foodstamp-purchase', name: 'EBT FoodStamp Purchase', method: 'POST', path: '/api/evertec/ebt/foodstamp-purchase', description: 'EBT FoodStamp purchase', category: 'Evertec ECR - EBT' },
@@ -67,6 +75,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
   { id: 'ecr-void', name: 'Void Transaction', method: 'POST', path: '/api/evertec/transaction/void', description: 'Cancel transaction', category: 'Evertec ECR - Transaction' },
   { id: 'ecr-tip-adjust', name: 'Tip Adjust', method: 'POST', path: '/api/evertec/transaction/tip-adjust', description: 'Adjust tip amount', category: 'Evertec ECR - Transaction' },
   { id: 'ecr-get-status', name: 'Get Transaction Status', method: 'POST', path: '/api/evertec/transaction/get-status', description: 'Poll transaction status', category: 'Evertec ECR - Transaction' },
+  { id: 'ecr-split-payment-status', name: '💳 Split Payment Status', method: 'POST', path: '/api/evertec/transaction/split-payment-status', description: 'Check split payment progress', category: 'Evertec ECR - Transaction' },
 
   // Evertec ECR - Cash
   { id: 'ecr-start-cash', name: 'Start Cash', method: 'POST', path: '/api/evertec/cash/start-cash', description: 'Cash transaction', category: 'Evertec ECR - Cash' },
@@ -126,6 +135,8 @@ const EXAMPLE_PAYLOADS: Record<string, ExamplePayload> = {
   // Sales
   'ecr-start-sale': mockSaleRequest,
   'ecr-start-ath-movil-sale': { ...mockSaleRequest, terminal_id: '30DR3473' },
+  'ecr-split-payment': exampleVISAandATHMovilSplit,
+  'ecr-split-payment-50-50': example5050Split,
 
   // EBT - all use similar structure with amounts
   'ecr-ebt-foodstamp-purchase': { ...mockBaseTransactionRequest },
@@ -145,6 +156,7 @@ const EXAMPLE_PAYLOADS: Record<string, ExamplePayload> = {
   'ecr-void': mockVoidRequest,
   'ecr-tip-adjust': { reference: '50', last_reference: '49', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', target_reference: '49', tip: '5.00' },
   'ecr-get-status': mockGetStatusRequest,
+  'ecr-split-payment-status': exampleStatusCheckRequest,
 
   // Cash
   'ecr-start-cash': { ...mockBaseTransactionRequest },
@@ -192,11 +204,74 @@ export default function ApiPlayground() {
   const [requestId, setRequestId] = useState<string>('123456');
   const [trxId, setTrxId] = useState<string>('');
   const [sessionId, setSessionId] = useState<string>('');
+  const [currentReference, setCurrentReference] = useState<string>('');
+  const [lastReference, setLastReference] = useState<string>('');
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAmountManager, setShowAmountManager] = useState(false);
 
   const endpoint = API_ENDPOINTS.find((e) => e.id === selectedEndpoint);
+
+  // Determine if current endpoint uses amounts
+  const endpointUsesAmounts = () => {
+    const amountEndpoints = [
+      'ecr-start-sale',
+      'ecr-start-ath-movil-sale',
+      'ecr-split-payment',
+      'ecr-ebt-foodstamp-purchase',
+      'ecr-ebt-foodstamp-refund',
+      'ecr-ebt-cash-purchase',
+      'ecr-ebt-cash-purchase-cashback',
+      'ecr-ebt-cash-withdrawal',
+      'ecr-ebt-foodstamp-voucher',
+      'ecr-ebt-cash-voucher',
+      'ecr-start-refund',
+      'ecr-start-ath-movil-refund',
+      'ecr-start-cash',
+      'ecr-start-cash-refund',
+      'ecr-start-preauth',
+      'ecr-completion',
+    ];
+    return amountEndpoints.includes(selectedEndpoint);
+  };
+
+  // Get current amounts from request body
+  const getCurrentAmounts = (): TransactionAmounts => {
+    try {
+      const parsed = JSON.parse(requestBody);
+      return parsed.amounts || {
+        total: '0.00',
+        base_state_tax: '0.00',
+        base_reduced_tax: '0.00',
+        tip: '0.00',
+        state_tax: '0.00',
+        reduced_tax: '0.00',
+        city_tax: '0.00',
+      };
+    } catch {
+      return {
+        total: '0.00',
+        base_state_tax: '0.00',
+        base_reduced_tax: '0.00',
+        tip: '0.00',
+        state_tax: '0.00',
+        reduced_tax: '0.00',
+        city_tax: '0.00',
+      };
+    }
+  };
+
+  // Update amounts in request body
+  const handleAmountsUpdate = (amounts: TransactionAmounts) => {
+    try {
+      const parsed = JSON.parse(requestBody);
+      parsed.amounts = amounts;
+      setRequestBody(JSON.stringify(parsed, null, 2));
+    } catch (err) {
+      console.error('Failed to update amounts:', err);
+    }
+  };
 
   // Group endpoints by category
   const groupedEndpoints = API_ENDPOINTS.reduce((acc, endpoint) => {
@@ -213,7 +288,29 @@ export default function ApiPlayground() {
     setError(null);
 
     // Set default payload based on endpoint
-    const defaultPayload = EXAMPLE_PAYLOADS[endpointId] || EXAMPLE_PAYLOADS['create-session-basic'];
+    let defaultPayload = EXAMPLE_PAYLOADS[endpointId] || EXAMPLE_PAYLOADS['create-session-basic'];
+
+    // Auto-inject session data if available
+    if (typeof defaultPayload === 'object' && defaultPayload !== null) {
+      const payload = { ...defaultPayload };
+
+      // Inject session_id if available and endpoint needs it
+      if (sessionId && 'session_id' in payload) {
+        (payload as any).session_id = sessionId;
+      }
+
+      // Inject references if available and endpoint needs them
+      if (currentReference && 'reference' in payload) {
+        (payload as any).reference = currentReference;
+      }
+
+      if (lastReference && 'last_reference' in payload) {
+        (payload as any).last_reference = lastReference;
+      }
+
+      defaultPayload = payload;
+    }
+
     setSelectedExample(endpointId);
     setRequestBody(JSON.stringify(defaultPayload, null, 2));
   };
@@ -262,14 +359,47 @@ export default function ApiPlayground() {
 
       // Auto-extract useful values from responses for easier testing
       if (data) {
+        // Extract session_id
         if (data.session_id && !sessionId) {
           setSessionId(data.session_id);
         }
+
+        // Extract trx_id
         if (data.trx_id && !trxId) {
           setTrxId(data.trx_id);
         }
+
+        // Extract requestId for PlacetoPay
         if (data.requestId && selectedEndpoint === 'create-session') {
           setRequestId(data.requestId.toString());
+        }
+
+        // Extract and auto-increment references
+        if (data.reference) {
+          const ref = data.reference.toString();
+          const refNum = parseInt(ref, 10);
+
+          if (!isNaN(refNum)) {
+            // Current reference becomes last reference
+            setLastReference(ref);
+            // Next reference is current + 1
+            setCurrentReference((refNum + 1).toString());
+          }
+        }
+
+        // For split payments, extract from the initial reference
+        if (selectedEndpoint === 'ecr-split-payment' && data.parts && data.parts.length > 0) {
+          // Get the last processed part's reference
+          const lastPart = data.parts[data.parts.length - 1];
+          if (lastPart.transaction && lastPart.transaction.reference) {
+            const ref = lastPart.transaction.reference.toString();
+            const refNum = parseInt(ref, 10);
+
+            if (!isNaN(refNum)) {
+              setLastReference(ref);
+              setCurrentReference((refNum + 1).toString());
+            }
+          }
         }
       }
     } catch (err) {
@@ -289,12 +419,26 @@ export default function ApiPlayground() {
       </div>
 
       {/* Session State Indicator */}
-      {(sessionId || trxId || requestId !== '123456') && (
+      {(sessionId || trxId || requestId !== '123456' || currentReference) && (
         <div className="mb-6 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-          <h3 className="text-sm font-semibold mb-2 flex items-center">
-            <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
-            Active Session Data
-          </h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold flex items-center">
+              <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+              Active Session Data
+            </h3>
+            <button
+              onClick={() => {
+                setSessionId('');
+                setTrxId('');
+                setRequestId('123456');
+                setCurrentReference('');
+                setLastReference('');
+              }}
+              className="text-xs px-3 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded transition-colors"
+            >
+              Clear All
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
             {sessionId && (
               <div className="bg-white dark:bg-gray-800 rounded p-2">
@@ -314,7 +458,26 @@ export default function ApiPlayground() {
                 <p className="font-mono text-xs">{requestId}</p>
               </div>
             )}
+            {currentReference && (
+              <div className="bg-white dark:bg-gray-800 rounded p-2 border-2 border-blue-300 dark:border-blue-700">
+                <span className="font-medium text-blue-700 dark:text-blue-400">Next Reference:</span>
+                <p className="font-mono text-xs font-bold text-blue-900 dark:text-blue-300">{currentReference}</p>
+                <span className="text-xs text-gray-500 dark:text-gray-400">Use this for your next transaction</span>
+              </div>
+            )}
+            {lastReference && (
+              <div className="bg-white dark:bg-gray-800 rounded p-2">
+                <span className="font-medium text-gray-600 dark:text-gray-400">Last Reference:</span>
+                <p className="font-mono text-xs">{lastReference}</p>
+                <span className="text-xs text-gray-500 dark:text-gray-400">Previous transaction</span>
+              </div>
+            )}
           </div>
+          {currentReference && (
+            <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs text-blue-700 dark:text-blue-300">
+              <strong>💡 Auto-Tracking:</strong> References auto-increment after each transaction. Next transaction will use <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-800 rounded">reference: "{currentReference}"</code> and <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-800 rounded">last_reference: "{lastReference}"</code>
+            </div>
+          )}
         </div>
       )}
 
@@ -397,7 +560,20 @@ export default function ApiPlayground() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold">Request</h3>
-              {selectedEndpoint === 'create-session' && (
+              <div className="flex gap-2">
+                {/* Amount Manager Button - Only show for endpoints that use amounts */}
+                {endpointUsesAmounts() && (
+                  <button
+                    onClick={() => setShowAmountManager(true)}
+                    className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white text-sm font-semibold rounded-lg transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Manage Amounts
+                  </button>
+                )}
+                {selectedEndpoint === 'create-session' && (
                 <select
                   value={selectedExample}
                   onChange={(e) => handleExampleChange(e.target.value)}
@@ -409,6 +585,17 @@ export default function ApiPlayground() {
                   <option value="create-session-partial">Partial Payment ⚠️ Requires Setup</option>
                 </select>
               )}
+              {selectedEndpoint === 'ecr-split-payment' && (
+                <select
+                  value={selectedExample}
+                  onChange={(e) => handleExampleChange(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm"
+                >
+                  <option value="ecr-split-payment">3-Way Split (VISA + ATH Movil + Card)</option>
+                  <option value="ecr-split-payment-50-50">2-Way 50/50 Split</option>
+                </select>
+              )}
+              </div>
             </div>
 
             {/* Partial Payment Warning */}
@@ -424,6 +611,32 @@ export default function ApiPlayground() {
                     </h4>
                     <p className="text-sm text-yellow-700 dark:text-yellow-400">
                       While PlacetoPay documentation shows setting <code className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-800 rounded text-xs">allowPartial: true</code>, some merchant accounts may require additional permissions. If you receive an error stating &ldquo;Partial payment not allowed to your site&rdquo;, contact PlacetoPay support at <a href="mailto:soporte@placetopay.com" className="underline font-medium">soporte@placetopay.com</a> to verify your account has this feature enabled.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Split Payment Info */}
+            {selectedEndpoint === 'ecr-split-payment' && (
+              <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-start">
+                  <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 mr-3 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  <div className="text-sm">
+                    <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">
+                      💳 How Split Payment Works
+                    </h4>
+                    <ul className="space-y-1 text-blue-700 dark:text-blue-400 list-disc list-inside">
+                      <li><strong>Sequential Processing:</strong> First payment → poll until approved → second payment → poll → done</li>
+                      <li><strong>Auto Reference Management:</strong> If you start with ref=100, next is ref=101, then ref=102 (automatic)</li>
+                      <li><strong>Same Session:</strong> All parts use the same session_id (passed automatically)</li>
+                      <li><strong>Tax Splitting:</strong> Puerto Rico taxes split proportionally based on percentages</li>
+                      <li><strong>Percentages Must Sum to 100%</strong> (±0.01% tolerance)</li>
+                    </ul>
+                    <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                      💡 Tip: Use <strong>Split Payment Status</strong> endpoint with the returned <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-800 rounded">split_trx_id</code> to track progress
                     </p>
                   </div>
                 </div>
@@ -531,6 +744,15 @@ export default function ApiPlayground() {
           )}
         </div>
       </div>
+
+      {/* Amount Manager Modal */}
+      {showAmountManager && (
+        <AmountManager
+          currentAmounts={getCurrentAmounts()}
+          onAmountsUpdate={handleAmountsUpdate}
+          onClose={() => setShowAmountManager(false)}
+        />
+      )}
 
       {/* Documentation Links */}
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">

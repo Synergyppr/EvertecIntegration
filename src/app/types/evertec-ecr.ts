@@ -83,7 +83,12 @@ export interface BaseRequest {
   cashier_id: string;
   /** Current transaction reference */
   reference: string;
-  /** Previous transaction reference */
+  /**
+   * Previous transaction reference
+   * - Use sequential reference for normal transactions (e.g., "99" for reference "100")
+   * - Use "" (empty string) for first transaction
+   * - Use "" (empty string) if previous transaction did not receive a response from server
+   */
   last_reference: string;
   /** Session ID obtained from logon */
   session_id?: string;
@@ -360,6 +365,53 @@ export interface TipAdjustResponse extends BaseResponse {
   target_reference: string;
   tip: string;
   session_id: string;
+}
+
+/**
+ * Transaction tracking record for tip adjustment limits
+ */
+export interface TransactionRecord {
+  /** Transaction reference number */
+  reference: string;
+  /** Terminal ID */
+  terminal_id: string;
+  /** Original tip amount from initial transaction */
+  original_tip: string;
+  /** Current tip amount (after adjustments) */
+  current_tip: string;
+  /** Number of tip adjustments made */
+  tip_adjustment_count: number;
+  /** Maximum tip adjustments allowed (default: 1) */
+  max_tip_adjustments: number;
+  /** Transaction amounts */
+  amounts?: TransactionAmounts;
+  /** Transaction status */
+  status: 'pending' | 'approved' | 'declined' | 'voided';
+  /** Approval code */
+  approval_code?: string;
+  /** Timestamps */
+  created_at: string;
+  last_adjusted_at?: string;
+}
+
+/**
+ * Tip adjustment history entry
+ */
+export interface TipAdjustmentHistory {
+  /** Adjustment number (1, 2, etc.) */
+  adjustment_number: number;
+  /** Previous tip amount */
+  previous_tip: string;
+  /** New tip amount */
+  new_tip: string;
+  /** Reference used for this adjustment */
+  adjustment_reference: string;
+  /** Timestamp of adjustment */
+  adjusted_at: string;
+  /** Whether adjustment was successful */
+  success: boolean;
+  /** Response from terminal */
+  response_message?: string;
 }
 
 // ============================================================================
@@ -701,6 +753,109 @@ export interface ScanCodeResponse extends BaseResponse {
   /** Scanned code data */
   scanned_code?: string;
   session_id: string;
+}
+
+// ============================================================================
+// SPLIT PAYMENT TYPES
+// ============================================================================
+
+/**
+ * Split payment part configuration
+ */
+export interface SplitPaymentPart {
+  /** Payment method: 'card' for regular sale, 'ath-movil' for ATH Movil */
+  payment_method: 'card' | 'ath-movil';
+  /** Percentage of total for this part (0-100) */
+  percentage: number;
+  /** Description/label for this part */
+  label?: string;
+}
+
+/**
+ * Split Payment request - splits a transaction into multiple sequential payments
+ */
+export interface SplitPaymentRequest extends BaseRequest {
+  /** Email receipt indicator */
+  receipt_email: YesNo;
+  /** Total transaction amounts (will be split according to parts) */
+  amounts: TransactionAmounts;
+  /** Receipt output destination */
+  receipt_output: ReceiptOutput;
+  /** Manual entry indicator */
+  manual_entry_indicator: YesNo;
+  /** Force duplicate transaction */
+  force_duplicate?: YesNo;
+  /** Split configuration - array of payment parts */
+  splits: SplitPaymentPart[];
+  /** Polling interval in milliseconds for checking transaction status (default: 2000) */
+  polling_interval?: number;
+  /** Maximum polling attempts before timeout (default: 60) */
+  max_polling_attempts?: number;
+}
+
+/**
+ * Split Payment response - contains IDs for tracking all parts
+ */
+export interface SplitPaymentResponse {
+  /** Unique split transaction ID */
+  split_trx_id: string;
+  /** Status: 'pending', 'processing', 'completed', 'failed' */
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  /** Message describing current status */
+  message: string;
+  /** Array of individual transaction parts */
+  parts: SplitPaymentPartStatus[];
+  /** Original request reference */
+  reference: string;
+  /** Total amounts */
+  total_amounts: TransactionAmounts;
+}
+
+/**
+ * Individual part status within split payment
+ */
+export interface SplitPaymentPartStatus {
+  /** Part number (1-based index) */
+  part_number: number;
+  /** Payment method used */
+  payment_method: 'card' | 'ath-movil';
+  /** Label for this part */
+  label?: string;
+  /** Transaction ID from ECR */
+  trx_id?: string;
+  /** Status of this part */
+  status: 'pending' | 'processing' | 'approved' | 'rejected' | 'error';
+  /** Message for this part */
+  message?: string;
+  /** Amounts for this part */
+  amounts: TransactionAmounts;
+  /** Full transaction response if completed */
+  transaction?: TransactionResponse;
+  /** Error details if failed */
+  error?: string;
+  /** Timestamp when this part started */
+  started_at?: string;
+  /** Timestamp when this part completed */
+  completed_at?: string;
+}
+
+/**
+ * Get Split Payment Status request
+ */
+export interface GetSplitPaymentStatusRequest {
+  /** Split transaction ID */
+  split_trx_id: string;
+  session_id: string;
+  terminal_id: string;
+  station_number: string;
+  cashier_id: string;
+}
+
+/**
+ * Get Split Payment Status response
+ */
+export interface GetSplitPaymentStatusResponse extends SplitPaymentResponse {
+  // Inherits all fields from SplitPaymentResponse
 }
 
 // ============================================================================

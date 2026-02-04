@@ -17,6 +17,9 @@ import type {
 
 /**
  * Validates and enriches base request with defaults from config
+ *
+ * Note: last_reference can be explicitly set to "" per Evertec docs
+ * for first transaction or when no server response
  */
 export function buildBaseRequest<T extends Partial<BaseRequest>>(
   body: T
@@ -28,13 +31,18 @@ export function buildBaseRequest<T extends Partial<BaseRequest>>(
     terminal_id: body.terminal_id || config.terminalId,
     station_number: body.station_number || config.stationNumber,
     cashier_id: body.cashier_id || config.cashierId,
-    reference: body.reference || '',
-    last_reference: body.last_reference || '',
+    // Allow explicit empty string for reference and last_reference
+    reference: body.reference !== undefined ? body.reference : '',
+    last_reference: body.last_reference !== undefined ? body.last_reference : '',
   } as T & BaseRequest;
 }
 
 /**
  * Validates required fields in a request
+ *
+ * Special handling for last_reference:
+ * - Empty string ("") is allowed per Evertec documentation
+ * - Use empty string for first transaction or when no response from server
  */
 export function validateRequiredFields(
   payload: Record<string, unknown> | unknown,
@@ -43,6 +51,25 @@ export function validateRequiredFields(
   const payloadObj = payload as Record<string, unknown>;
 
   for (const field of requiredFields) {
+    // Special case: last_reference can be empty string per Evertec docs
+    if (field === 'last_reference') {
+      // Only check if field exists (undefined/null), allow empty string
+      if (payloadObj[field] === undefined || payloadObj[field] === null) {
+        return {
+          valid: false,
+          error: NextResponse.json(
+            {
+              error_code: 'MISSING_FIELD',
+              error_message: `${field} is required (use "" for first transaction or no server response)`,
+            } as EvertecEcrError,
+            { status: 400 }
+          ),
+        };
+      }
+      continue;
+    }
+
+    // Regular validation for other fields
     if (!payloadObj[field]) {
       return {
         valid: false,
@@ -244,4 +271,142 @@ export function createApiDocumentation(config: {
     responseBody: config.responseBody,
     notes: config.notes || [],
   });
+}
+
+/**
+ * Validates tip adjustment limits before sending to terminal
+ *
+ * Checks local transaction records to prevent exceeding terminal limits
+ * (typically 1-2 tip adjustments per transaction)
+ */
+export async function validateTipAdjustmentLimit(
+  terminal_id: string,
+  target_reference: string
+): Promise<{ valid: boolean; error?: NextResponse }> {
+  const { canAdjustTip } = await import('./transaction-store');
+
+  const result = canAdjustTip(terminal_id, target_reference);
+
+  if (!result.can_adjust) {
+    return {
+      valid: false,
+      error: NextResponse.json(
+        {
+          error_code: 'TIP_ADJUSTMENT_LIMIT_EXCEEDED',
+          error_message: result.reason || 'Cannot adjust tip for this transaction',
+          details: `Target: ${target_reference}, Adjustments: ${result.current_count}/${result.max_count}`,
+          suggestions: [
+            'Transaction has been tip-adjusted the maximum number of times',
+            'To change the tip further, you must void this transaction and create a new one',
+            'Use /api/evertec/transaction/void to void the transaction',
+          ],
+        } as EvertecEcrError & { suggestions: string[] },
+        { status: 400 }
+      ),
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Enhanced error handling for tip adjust responses
+ *
+ * Provides user-friendly error messages and actionable suggestions
+ */
+export function handleTipAdjustError(
+  response: Record<string, unknown>
+): NextResponse {
+  const responseMessage = String(response.response_message || '');
+  const approvalCode = String(response.approval_code || '');
+
+  // Handle specific error: EXCEEDS TIP ADJUSTS
+  if (responseMessage === 'EXCEEDS TIP ADJUSTS.') {
+    return NextResponse.json(
+      {
+        ...response,
+        error_code: 'TERMINAL_TIP_ADJUSTMENT_LIMIT',
+        error_message: 'Terminal reports: Transaction has been tip-adjusted the maximum number of times',
+        user_message:
+          'This transaction cannot be tip-adjusted again. The terminal has reached its adjustment limit for this transaction.',
+        suggestions: [
+          'Void this transaction using /api/evertec/transaction/void',
+          'Create a new transaction with the correct tip amount',
+          'Contact support if you need to increase the tip adjustment limit',
+        ],
+        can_retry: false,
+        suggested_action: 'void_and_redo',
+      },
+      { status: 200 }
+    );
+  }
+
+  // Handle other tip-related errors
+  if (responseMessage === 'TIP ADJUST NOT ALLOWED.') {
+    return NextResponse.json(
+      {
+        ...response,
+        error_code: 'TIP_ADJUST_NOT_ALLOWED',
+        error_message: 'Tip adjustment is not allowed for this transaction type',
+        user_message: 'This transaction does not support tip adjustments.',
+        suggestions: [
+          'Verify that the transaction is a card payment (not cash or EBT)',
+          'Check that the transaction was approved',
+          'Some card types may not support tip adjustments',
+        ],
+        can_retry: false,
+      },
+      { status: 200 }
+    );
+  }
+
+  if (responseMessage === 'TOO MUCH TIP.') {
+    return NextResponse.json(
+      {
+        ...response,
+        error_code: 'TIP_AMOUNT_TOO_HIGH',
+        error_message: 'Tip amount exceeds the maximum allowed percentage',
+        user_message: 'The tip amount is too high for this transaction.',
+        suggestions: [
+          'Reduce the tip amount (typically max 25-50% of subtotal)',
+          'Check terminal configuration for tip limits',
+        ],
+        can_retry: true,
+      },
+      { status: 200 }
+    );
+  }
+
+  if (responseMessage === 'INVALID TIP.') {
+    return NextResponse.json(
+      {
+        ...response,
+        error_code: 'INVALID_TIP_VALUE',
+        error_message: 'Tip value is invalid or improperly formatted',
+        user_message: 'The tip amount format is invalid.',
+        suggestions: [
+          'Ensure tip is a valid decimal number (e.g., "5.00")',
+          'Tip amount must be greater than or equal to 0.00',
+        ],
+        can_retry: true,
+      },
+      { status: 200 }
+    );
+  }
+
+  // Return response as-is if not a specific error
+  if (approvalCode === '00') {
+    return NextResponse.json(response, { status: 200 });
+  }
+
+  // Generic error response
+  return NextResponse.json(
+    {
+      ...response,
+      error_code: 'TIP_ADJUST_FAILED',
+      error_message: responseMessage || 'Tip adjustment failed',
+      user_message: 'Unable to adjust tip for this transaction.',
+    },
+    { status: 200 }
+  );
 }

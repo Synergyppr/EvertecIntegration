@@ -4,6 +4,8 @@
  *
  * The customer will be prompted to insert/swipe/tap their card on the terminal.
  * Different data may be requested based on the terminal's configuration.
+ *
+ * This endpoint automatically tracks approved transactions for tip adjustment management.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -16,6 +18,7 @@ import {
   handleTerminalError,
   createApiDocumentation,
 } from '@/app/lib/evertec-ecr-helpers';
+import { saveTransaction } from '@/app/lib/transaction-store';
 import type {
   StartSaleRequest,
   TransactionResponse,
@@ -72,6 +75,26 @@ export async function POST(request: NextRequest) {
       EVERTEC_ECR_ENDPOINTS.START_SALE,
       payload
     );
+
+    const response = data as TransactionResponse;
+
+    // Track approved transactions for tip adjustment management
+    if (response.approval_code === '00') {
+      saveTransaction(payload.terminal_id, payload.reference, {
+        reference: payload.reference,
+        terminal_id: payload.terminal_id,
+        original_tip: payload.amounts.tip || '0.00',
+        current_tip: payload.amounts.tip || '0.00',
+        tip_adjustment_count: 0,
+        max_tip_adjustments: 1, // Default limit (can be configured per terminal)
+        amounts: payload.amounts,
+        status: 'approved',
+        approval_code: response.approval_code,
+        created_at: new Date().toISOString(),
+      });
+
+      console.log(`[Transaction Tracking] Saved transaction ${payload.reference} for tip adjustment tracking`);
+    }
 
     return NextResponse.json(data, { status });
   } catch (error) {
