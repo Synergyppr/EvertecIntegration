@@ -12,6 +12,7 @@
  * - Part 3 (Cash): $0.66 (10.312%)
  */
 export const exampleVISAandATHMovilSplit = {
+  terminal_url: 'http://10.10.6.35:2030', // optional — overrides EVERTEC_ECR_TERMINAL_URL
   terminal_id: '30DR3479',
   station_number: '1234',
   cashier_id: '1234',
@@ -56,6 +57,7 @@ export const exampleVISAandATHMovilSplit = {
  * Scenario: Customer wants to split payment evenly across two credit cards
  */
 export const example5050Split = {
+  terminal_url: 'http://10.10.6.35:2030', // optional — overrides EVERTEC_ECR_TERMINAL_URL
   terminal_id: '30DR3479',
   station_number: '1234',
   cashier_id: '1234',
@@ -94,6 +96,7 @@ export const example5050Split = {
  * Total: $50.00
  */
 export const examplePartialCardFullATHMovil = {
+  terminal_url: 'http://10.10.6.35:2030', // optional — overrides EVERTEC_ECR_TERMINAL_URL
   terminal_id: '30DR3479',
   station_number: '1234',
   cashier_id: '1234',
@@ -132,6 +135,7 @@ export const examplePartialCardFullATHMovil = {
  * Total: $200.00
  */
 export const exampleComplexSplit = {
+  terminal_url: 'http://10.10.6.35:2030', // optional — overrides EVERTEC_ECR_TERMINAL_URL
   terminal_id: '30DR3479',
   station_number: '1234',
   cashier_id: '1234',
@@ -174,6 +178,7 @@ export const exampleComplexSplit = {
  * Scenario: Customer wants to use two different cards
  */
 export const exampleSimpleTwoPartSplit = {
+  terminal_url: 'http://10.10.6.35:2030', // optional — overrides EVERTEC_ECR_TERMINAL_URL
   reference: '500',
   last_reference: '499',
   session_id: 'SESSION-ID-HERE',

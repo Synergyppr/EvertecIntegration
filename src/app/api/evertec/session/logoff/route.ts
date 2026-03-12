@@ -11,6 +11,7 @@ import {
   EVERTEC_ECR_ENDPOINTS,
   buildEndpointUrl,
   getDefaultHeaders,
+  validateTerminalUrl,
 } from '@/app/config/evertec-ecr';
 import type {
   LogoffRequest,
@@ -26,7 +27,19 @@ export async function POST(request: NextRequest) {
     // Get configuration
     const config = getEvertecEcrConfig();
 
-    // Build request payload
+    // Validate terminal_url override if provided (middleware-only, not forwarded)
+    const terminalUrlOverride: string | undefined = body.terminal_url;
+    if (terminalUrlOverride && !validateTerminalUrl(terminalUrlOverride)) {
+      return NextResponse.json(
+        {
+          error_code: 'INVALID_TERMINAL_URL',
+          error_message: `Invalid terminal_url format "${terminalUrlOverride}". Expected: http://IP:PORT`,
+        } as EvertecEcrError,
+        { status: 400 }
+      );
+    }
+
+    // Build request payload (terminal_url is stripped — not forwarded)
     const payload: LogoffRequest = {
       terminal_id: body.terminal_id || config.terminalId,
       station_number: body.station_number || config.stationNumber,
@@ -58,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     // Make request to terminal
     const response = await fetch(
-      buildEndpointUrl(EVERTEC_ECR_ENDPOINTS.LOGOFF),
+      buildEndpointUrl(EVERTEC_ECR_ENDPOINTS.LOGOFF, terminalUrlOverride),
       {
         method: 'POST',
         headers: getDefaultHeaders(config.apiKey),
@@ -109,6 +122,12 @@ export async function GET() {
       type: 'object',
       required: ['reference', 'last_reference'],
       properties: {
+        terminal_url: {
+          type: 'string',
+          description:
+            'Middleware-only: Terminal base URL override (e.g., http://192.168.1.32:2030). Falls back to env EVERTEC_ECR_TERMINAL_URL. Stripped before forwarding to terminal.',
+          example: 'http://192.168.1.32:2030',
+        },
         terminal_id: {
           type: 'string',
           description:

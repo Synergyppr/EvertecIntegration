@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
       station_number: body.station_number || config.stationNumber,
       cashier_id: body.cashier_id || config.cashierId,
       trx_id: body.trx_id,
+      terminal_url: body.terminal_url,
     };
 
     const validation = validateRequiredFields(payload, [

@@ -14,7 +14,7 @@ import {
 } from '@/app/lib/evertec-ecr-helpers';
 import type {
   JournalRequest,
-  TransactionResponse,
+  JournalResponse,
 } from '@/app/types/evertec-ecr';
 
 export async function POST(request: NextRequest) {
@@ -23,12 +23,8 @@ export async function POST(request: NextRequest) {
 
     const payload: JournalRequest = {
       ...buildBaseRequest(body),
-      receipt_email: body.receipt_email || 'yes',
-      
-      receipt_output: body.receipt_output || 'BOTH',
-      manual_entry_indicator: body.manual_entry_indicator || 'no',
+      target_reference: body.target_reference || 'all',
       session_id: body.session_id,
-      ...body,
     };
 
     const required = ['reference', 'last_reference', 'session_id'];
@@ -38,9 +34,7 @@ export async function POST(request: NextRequest) {
       return validation.error!;
     }
 
-    
-
-    const { data, status } = await makeTerminalRequest<TransactionResponse>(
+    const { data, status } = await makeTerminalRequest<JournalResponse>(
       EVERTEC_ECR_ENDPOINTS.JOURNAL,
       payload
     );
@@ -62,10 +56,7 @@ export async function GET() {
         reference: { type: 'string', example: '100', required: true },
         last_reference: { type: 'string', example: '99', required: true },
         session_id: { type: 'string', example: 'SESSION-ID-HERE', required: true },
-        receipt_email: { type: 'string', enum: ['yes', 'no'], default: 'yes' },
-        
-        receipt_output: { type: 'string', enum: ['BOTH', 'HTML', 'PRINTER', 'NONE'], default: 'BOTH' },
-        manual_entry_indicator: { type: 'string', enum: ['yes', 'no'], default: 'no' },
+        target_reference: { type: 'string', example: 'all', description: 'Target reference number or "all" for all transactions', default: 'all' },
       },
     },
     responseBody: {
@@ -73,9 +64,15 @@ export async function GET() {
         reference: '100',
         approval_code: '00',
         response_message: 'APPROVED',
-        terminal_id: '30DR3478',
+        terminal_id: '40000260',
+        session_id: 'SESSION-ID-HERE',
+        target_reference: 'all',
       },
     },
-    notes: ['Retrieves transaction records'],
+    notes: [
+      'Retrieves transaction journal records',
+      'Set target_reference to a specific reference number to retrieve a single transaction',
+      'Set target_reference to "all" (default) to retrieve all transactions in the current batch',
+    ],
   });
 }

@@ -167,6 +167,7 @@ export async function POST(request: NextRequest) {
           receipt_output: payload.receipt_output,
           manual_entry_indicator: payload.manual_entry_indicator,
           force_duplicate: payload.force_duplicate,
+          terminal_url: payload.terminal_url,
         }
       );
 
@@ -196,7 +197,8 @@ export async function POST(request: NextRequest) {
         payload.station_number,
         payload.cashier_id,
         payload.polling_interval,
-        payload.max_polling_attempts
+        payload.max_polling_attempts,
+        payload.terminal_url
       );
 
       if (pollResult.status === 'approved') {

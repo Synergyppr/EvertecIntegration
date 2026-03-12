@@ -8,6 +8,7 @@ import {
   getEvertecEcrConfig,
   buildEndpointUrl,
   getDefaultHeaders,
+  validateTerminalUrl,
 } from '@/app/config/evertec-ecr';
 import type {
   BaseRequest,
@@ -88,7 +89,12 @@ export function validateRequiredFields(
 }
 
 /**
- * Makes a request to the terminal
+ * Makes a request to the terminal.
+ *
+ * If the payload contains a `terminal_url` field it is used as the target base
+ * URL for this request, overriding EVERTEC_ECR_TERMINAL_URL. The field is
+ * stripped from the payload before forwarding to the physical terminal so the
+ * device never sees it.
  */
 export async function makeTerminalRequest<TResponse>(
   endpoint: string,
@@ -96,13 +102,32 @@ export async function makeTerminalRequest<TResponse>(
 ): Promise<{ data: TResponse | EvertecEcrError; status: number }> {
   const config = getEvertecEcrConfig();
 
+  // Extract and strip the middleware-only terminal_url override
+  const payloadRecord = payload as Record<string, unknown>;
+  const { terminal_url: terminalUrlOverride, ...forwardPayload } = payloadRecord ?? {};
+
+  if (terminalUrlOverride !== undefined) {
+    if (!validateTerminalUrl(terminalUrlOverride as string)) {
+      return {
+        data: {
+          error_code: 'INVALID_TERMINAL_URL',
+          error_message: `Invalid terminal_url format "${terminalUrlOverride}". Expected: http://IP:PORT`,
+        } as EvertecEcrError,
+        status: 400,
+      };
+    }
+  }
+
   try {
-    const response = await fetch(buildEndpointUrl(endpoint), {
-      method: 'POST',
-      headers: getDefaultHeaders(config.apiKey),
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(config.timeout || 30000),
-    });
+    const response = await fetch(
+      buildEndpointUrl(endpoint, terminalUrlOverride as string | undefined),
+      {
+        method: 'POST',
+        headers: getDefaultHeaders(config.apiKey),
+        body: JSON.stringify(forwardPayload),
+        signal: AbortSignal.timeout(config.timeout || 30000),
+      }
+    );
 
     const data = await response.json();
 

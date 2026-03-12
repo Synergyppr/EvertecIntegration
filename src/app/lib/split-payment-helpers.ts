@@ -141,6 +141,7 @@ export async function startSplitPartTransaction(
     receipt_output: 'BOTH' | 'HTML' | 'PRINTER' | 'NONE' | 'both';
     manual_entry_indicator: 'yes' | 'no';
     force_duplicate?: 'yes' | 'no';
+    terminal_url?: string;
   }
 ): Promise<{
   success: boolean;
@@ -210,7 +211,8 @@ export async function pollTransactionStatus(
   station_number: string,
   cashier_id: string,
   pollingInterval: number = 2000,
-  maxAttempts: number = 60
+  maxAttempts: number = 60,
+  terminal_url?: string
 ): Promise<{
   status: 'approved' | 'rejected' | 'timeout' | 'error';
   response?: GetTransactionStatusResponse;
@@ -222,6 +224,7 @@ export async function pollTransactionStatus(
     station_number,
     cashier_id,
     trx_id,
+    terminal_url,
   };
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {

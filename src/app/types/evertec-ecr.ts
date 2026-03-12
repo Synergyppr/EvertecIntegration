@@ -92,6 +92,12 @@ export interface BaseRequest {
   last_reference: string;
   /** Session ID obtained from logon */
   session_id?: string;
+  /**
+   * Middleware-only: Terminal base URL override (e.g., http://192.168.1.32:2030).
+   * Falls back to EVERTEC_ECR_TERMINAL_URL env var when omitted.
+   * Stripped before forwarding to the physical terminal.
+   */
+  terminal_url?: string;
 }
 
 /**
@@ -125,9 +131,7 @@ export interface BaseResponse {
 /**
  * Logon request - establishes session with terminal
  */
-export interface LogonRequest extends BaseRequest {
-  // Only base fields required
-}
+export type LogonRequest = BaseRequest;
 
 /**
  * Logon response - returns session ID
@@ -140,16 +144,12 @@ export interface LogonResponse extends BaseResponse {
 /**
  * Logoff request - ends session with terminal
  */
-export interface LogoffRequest extends BaseRequest {
-  // Only base fields required
-}
+export type LogoffRequest = BaseRequest;
 
 /**
  * Logoff response
  */
-export interface LogoffResponse extends BaseResponse {
-  // Only base fields
-}
+export type LogoffResponse = BaseResponse;
 
 // ============================================================================
 // SALE TRANSACTIONS
@@ -198,16 +198,12 @@ export interface TransactionResponse extends BaseResponse {
 /**
  * ATH Movil Sale request (Puerto Rico mobile payment)
  */
-export interface StartAthMovilSaleRequest extends StartSaleRequest {
-  // Same as StartSaleRequest
-}
+export type StartAthMovilSaleRequest = StartSaleRequest;
 
 /**
  * ATH Movil Sale response
  */
-export interface StartAthMovilSaleResponse extends TransactionResponse {
-  // Same as TransactionResponse
-}
+export type StartAthMovilSaleResponse = TransactionResponse;
 
 // ============================================================================
 // EBT TRANSACTIONS (Electronic Benefits Transfer)
@@ -521,9 +517,7 @@ export interface TotalsReportRequest extends BaseRequest {
 /**
  * Device Status request - checks terminal health
  */
-export interface GetStatusRequest extends BaseRequest {
-  // Only base fields
-}
+export type GetStatusRequest = BaseRequest;
 
 /**
  * Device Status response
@@ -564,9 +558,7 @@ export interface CustomPrintRequest extends BaseRequest {
 /**
  * Get Signature File request - retrieves signature image
  */
-export interface GetSignatureFileRequest extends BaseRequest {
-  // Only base fields
-}
+export type GetSignatureFileRequest = BaseRequest;
 
 /**
  * Get Signature File response
@@ -580,9 +572,7 @@ export interface GetSignatureFileResponse extends BaseResponse {
 /**
  * Capture Signature request - prompts for signature capture
  */
-export interface CaptureSignatureRequest extends BaseRequest {
-  // Only base fields
-}
+export type CaptureSignatureRequest = BaseRequest;
 
 /**
  * Capture Signature response
@@ -682,6 +672,12 @@ export interface GetTransactionStatusRequest {
   cashier_id: string;
   /** Transaction ID to check */
   trx_id: string;
+  /**
+   * Middleware-only: Terminal base URL override (e.g., http://10.10.6.35:2030).
+   * Falls back to EVERTEC_ECR_TERMINAL_URL env var when omitted.
+   * Stripped before forwarding to the physical terminal.
+   */
+  terminal_url?: string;
 }
 
 /**
@@ -742,9 +738,7 @@ export interface ItemsListResponse extends BaseResponse {
 /**
  * Scan Code request - initiates barcode/QR scan
  */
-export interface ScanCodeRequest extends BaseRequest {
-  // Only base fields
-}
+export type ScanCodeRequest = BaseRequest;
 
 /**
  * Scan Code response
@@ -849,14 +843,17 @@ export interface GetSplitPaymentStatusRequest {
   terminal_id: string;
   station_number: string;
   cashier_id: string;
+  /**
+   * Middleware-only: Terminal base URL override (e.g., http://10.10.6.35:2030).
+   * Falls back to EVERTEC_ECR_TERMINAL_URL env var when omitted.
+   */
+  terminal_url?: string;
 }
 
 /**
  * Get Split Payment Status response
  */
-export interface GetSplitPaymentStatusResponse extends SplitPaymentResponse {
-  // Inherits all fields from SplitPaymentResponse
-}
+export type GetSplitPaymentStatusResponse = SplitPaymentResponse;
 
 // ============================================================================
 // ERROR TYPES

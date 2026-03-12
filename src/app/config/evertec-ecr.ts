@@ -167,11 +167,14 @@ export function validateTerminalUrl(url: string): boolean {
 }
 
 /**
- * Helper function to build full endpoint URL
+ * Helper function to build full endpoint URL.
+ * @param endpoint - The ECR endpoint path (e.g., '/logon')
+ * @param terminalUrl - Optional per-request terminal base URL override.
+ *                      Falls back to EVERTEC_ECR_TERMINAL_URL env var.
  */
-export function buildEndpointUrl(endpoint: string): string {
+export function buildEndpointUrl(endpoint: string, terminalUrl?: string): string {
   const config = getEvertecEcrConfig();
-  return `${config.terminalUrl}${endpoint}`;
+  return `${terminalUrl || config.terminalUrl}${endpoint}`;
 }
 
 /**

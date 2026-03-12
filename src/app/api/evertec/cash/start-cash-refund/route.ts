@@ -27,9 +27,7 @@ export async function POST(request: NextRequest) {
       receipt_email: body.receipt_email || 'yes',
       amounts: body.amounts,
       receipt_output: body.receipt_output || 'BOTH',
-      manual_entry_indicator: body.manual_entry_indicator || 'no',
       session_id: body.session_id,
-      ...body,
     };
 
     const required = ['reference', 'last_reference', 'session_id', 'amounts'];

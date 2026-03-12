@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       amounts: body.amounts,
       receipt_output: body.receipt_output || 'BOTH',
       manual_entry_indicator: body.manual_entry_indicator || 'no',
+      force_duplicate: body.force_duplicate,
       session_id: body.session_id,
     };
 
