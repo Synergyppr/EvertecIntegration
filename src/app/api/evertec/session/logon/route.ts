@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       reference: body.reference,
       last_reference: body.last_reference,
     };
-
+    console.log('Logon request payload:', payload);
     // Validate required fields
     if (!payload.reference) {
       return NextResponse.json(
