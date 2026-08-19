@@ -27,9 +27,17 @@ export async function POST(request: NextRequest) {
 
     // Get configuration
     const config = getEvertecEcrConfig();
+    console.log('--- LOGON DEBUG ---');
+    console.log('Terminal URL:', config.terminalUrl);
+    console.log('API Key:', config.apiKey ? `${config.apiKey.substring(0, 6)}...${config.apiKey.substring(config.apiKey.length - 4)}` : 'MISSING');
+    console.log('Terminal ID:', config.terminalId);
+    console.log('Station Number:', config.stationNumber);
+    console.log('Cashier ID:', config.cashierId);
+    console.log('Timeout:', config.timeout);
 
-    // Validate terminal_url override if provided (middleware-only, not forwarded)
+    // Extract middleware-only overrides (not forwarded to terminal)
     const terminalUrlOverride: string | undefined = body.terminal_url;
+    const apiKeyOverride: string | undefined = body.api_key;
     if (terminalUrlOverride && !validateTerminalUrl(terminalUrlOverride)) {
       return NextResponse.json(
         {
@@ -71,24 +79,35 @@ export async function POST(request: NextRequest) {
     }
 
     // Make request to terminal
+    const fullUrl = buildEndpointUrl(EVERTEC_ECR_ENDPOINTS.LOGON, terminalUrlOverride);
+    const effectiveApiKey = apiKeyOverride || config.apiKey;
+    const headers = getDefaultHeaders(effectiveApiKey);
+    console.log('Request URL:', fullUrl);
+    console.log('Request Headers:', JSON.stringify(headers));
+    console.log('Request Body:', JSON.stringify(payload));
+
     const response = await fetch(
-      buildEndpointUrl(EVERTEC_ECR_ENDPOINTS.LOGON, terminalUrlOverride),
+      fullUrl,
       {
         method: 'POST',
-        headers: getDefaultHeaders(config.apiKey),
+        headers,
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(config.timeout || 30000),
       }
     );
 
+    console.log('Response Status:', response.status);
+    console.log('Response Headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
+
     // Try to parse as JSON (terminals may not set correct Content-Type header)
     let data: LogonResponse | EvertecEcrError;
     try {
       data = await response.json();
+      console.log('Response Body:', JSON.stringify(data));
     } catch {
       // If JSON parsing fails, get text response for debugging
       const textResponse = await response.text().catch(() => 'Unable to read response body');
-      console.error('Failed to parse terminal response:', textResponse.substring(0, 200));
+      console.error('Failed to parse terminal response (raw text):', textResponse.substring(0, 500));
 
       return NextResponse.json(
         {
@@ -99,10 +118,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('--- LOGON DEBUG END ---');
     // Return response
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error('Error during logon:', error);
+    console.error('Error during logon:', error instanceof Error ? { name: error.name, message: error.message, cause: error.cause } : error);
 
     if (error instanceof Error && error.name === 'AbortError') {
       return NextResponse.json(

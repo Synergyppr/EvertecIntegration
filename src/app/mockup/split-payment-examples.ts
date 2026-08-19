@@ -13,6 +13,7 @@
  */
 export const exampleVISAandATHMovilSplit = {
   terminal_url: 'http://10.10.6.35:2030', // optional — overrides EVERTEC_ECR_TERMINAL_URL
+  api_key: 'b443a6cd95a8388d4b3ccea9f3762d41', // optional — overrides EVERTEC_ECR_API_KEY
   terminal_id: '30DR3479',
   station_number: '1234',
   cashier_id: '1234',
@@ -58,6 +59,7 @@ export const exampleVISAandATHMovilSplit = {
  */
 export const example5050Split = {
   terminal_url: 'http://10.10.6.35:2030', // optional — overrides EVERTEC_ECR_TERMINAL_URL
+  api_key: 'b443a6cd95a8388d4b3ccea9f3762d41', // optional — overrides EVERTEC_ECR_API_KEY
   terminal_id: '30DR3479',
   station_number: '1234',
   cashier_id: '1234',
@@ -97,6 +99,7 @@ export const example5050Split = {
  */
 export const examplePartialCardFullATHMovil = {
   terminal_url: 'http://10.10.6.35:2030', // optional — overrides EVERTEC_ECR_TERMINAL_URL
+  api_key: 'b443a6cd95a8388d4b3ccea9f3762d41', // optional — overrides EVERTEC_ECR_API_KEY
   terminal_id: '30DR3479',
   station_number: '1234',
   cashier_id: '1234',
@@ -136,6 +139,7 @@ export const examplePartialCardFullATHMovil = {
  */
 export const exampleComplexSplit = {
   terminal_url: 'http://10.10.6.35:2030', // optional — overrides EVERTEC_ECR_TERMINAL_URL
+  api_key: 'b443a6cd95a8388d4b3ccea9f3762d41', // optional — overrides EVERTEC_ECR_API_KEY
   terminal_id: '30DR3479',
   station_number: '1234',
   cashier_id: '1234',
@@ -179,6 +183,7 @@ export const exampleComplexSplit = {
  */
 export const exampleSimpleTwoPartSplit = {
   terminal_url: 'http://10.10.6.35:2030', // optional — overrides EVERTEC_ECR_TERMINAL_URL
+  api_key: 'b443a6cd95a8388d4b3ccea9f3762d41', // optional — overrides EVERTEC_ECR_API_KEY
   reference: '500',
   last_reference: '499',
   session_id: 'SESSION-ID-HERE',

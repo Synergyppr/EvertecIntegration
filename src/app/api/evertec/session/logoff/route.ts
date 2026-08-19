@@ -27,8 +27,9 @@ export async function POST(request: NextRequest) {
     // Get configuration
     const config = getEvertecEcrConfig();
 
-    // Validate terminal_url override if provided (middleware-only, not forwarded)
+    // Extract middleware-only overrides (not forwarded to terminal)
     const terminalUrlOverride: string | undefined = body.terminal_url;
+    const apiKeyOverride: string | undefined = body.api_key;
     if (terminalUrlOverride && !validateTerminalUrl(terminalUrlOverride)) {
       return NextResponse.json(
         {
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       buildEndpointUrl(EVERTEC_ECR_ENDPOINTS.LOGOFF, terminalUrlOverride),
       {
         method: 'POST',
-        headers: getDefaultHeaders(config.apiKey),
+        headers: getDefaultHeaders(apiKeyOverride || config.apiKey),
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(config.timeout || 30000),
       }

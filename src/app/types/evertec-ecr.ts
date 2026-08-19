@@ -98,6 +98,12 @@ export interface BaseRequest {
    * Stripped before forwarding to the physical terminal.
    */
   terminal_url?: string;
+  /**
+   * Middleware-only: API key override for terminal authentication.
+   * Falls back to EVERTEC_ECR_API_KEY env var when omitted.
+   * Stripped before forwarding to the physical terminal.
+   */
+  api_key?: string;
 }
 
 /**
@@ -678,6 +684,12 @@ export interface GetTransactionStatusRequest {
    * Stripped before forwarding to the physical terminal.
    */
   terminal_url?: string;
+  /**
+   * Middleware-only: API key override for terminal authentication.
+   * Falls back to EVERTEC_ECR_API_KEY env var when omitted.
+   * Stripped before forwarding to the physical terminal.
+   */
+  api_key?: string;
 }
 
 /**
@@ -848,6 +860,11 @@ export interface GetSplitPaymentStatusRequest {
    * Falls back to EVERTEC_ECR_TERMINAL_URL env var when omitted.
    */
   terminal_url?: string;
+  /**
+   * Middleware-only: API key override for terminal authentication.
+   * Falls back to EVERTEC_ECR_API_KEY env var when omitted.
+   */
+  api_key?: string;
 }
 
 /**

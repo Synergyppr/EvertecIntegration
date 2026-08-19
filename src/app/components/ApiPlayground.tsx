@@ -25,6 +25,13 @@ import type { CreateSessionRequest } from '../types/evertec';
 import type { TransactionAmounts } from '../types/evertec-ecr';
 import { AmountManager } from './AmountManager';
 
+/** Dev terminal overrides — shown in playground for easy testing */
+const ECR_DEV_CONFIG = {
+  terminal_url: 'http://10.10.6.35:2030',
+  api_key: 'b443a6cd95a8388d4b3ccea9f3762d41',
+  terminal_id: '40000260',
+};
+
 interface ApiEndpoint {
   id: string;
   name: string;
@@ -130,7 +137,7 @@ const EXAMPLE_PAYLOADS: Record<string, ExamplePayload> = {
 
   // Evertec ECR Examples - Session
   'ecr-logon': mockLogonRequest,
-  'ecr-logoff': { reference: '101', last_reference: '100' },
+  'ecr-logoff': { ...ECR_DEV_CONFIG, reference: '101', last_reference: '100', session_id: 'REPLACE-WITH-YOUR-SESSION-ID' },
 
   // Sales
   'ecr-start-sale': mockSaleRequest,
@@ -144,7 +151,7 @@ const EXAMPLE_PAYLOADS: Record<string, ExamplePayload> = {
   'ecr-ebt-cash-purchase': { ...mockBaseTransactionRequest },
   'ecr-ebt-cash-purchase-cashback': { ...mockSaleRequest, process_cashback: 'yes', amounts: { ...mockSaleRequest.amounts, cashback: '20.00' } },
   'ecr-ebt-cash-withdrawal': { ...mockBaseTransactionRequest, amounts: { total: '100.00' } },
-  'ecr-ebt-balance-inquiry': { reference: '80', last_reference: '79', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'BOTH', receipt_email: 'yes', manual_entry_indicator: 'no' },
+  'ecr-ebt-balance-inquiry': { ...ECR_DEV_CONFIG, reference: '80', last_reference: '79', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'BOTH', receipt_email: 'yes', manual_entry_indicator: 'no' },
   'ecr-ebt-foodstamp-voucher': { ...mockBaseTransactionRequest, force_duplicate: 'no' },
   'ecr-ebt-cash-voucher': { ...mockBaseTransactionRequest, force_duplicate: 'no' },
 
@@ -154,7 +161,7 @@ const EXAMPLE_PAYLOADS: Record<string, ExamplePayload> = {
 
   // Transaction Management
   'ecr-void': mockVoidRequest,
-  'ecr-tip-adjust': { reference: '50', last_reference: '49', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', target_reference: '49', tip: '5.00' },
+  'ecr-tip-adjust': { ...ECR_DEV_CONFIG, reference: '50', last_reference: '49', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', target_reference: '49', tip: '5.00' },
   'ecr-get-status': mockGetStatusRequest,
   'ecr-split-payment-status': exampleStatusCheckRequest,
 
@@ -163,36 +170,36 @@ const EXAMPLE_PAYLOADS: Record<string, ExamplePayload> = {
   'ecr-start-cash-refund': { ...mockBaseTransactionRequest },
 
   // PreAuth
-  'ecr-start-preauth': { reference: '124', last_reference: '123', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', amounts: { total: '100.00' }, receipt_output: 'BOTH', receipt_email: 'yes', manual_entry_indicator: 'no', force_duplicate: 'no' },
-  'ecr-completion': { reference: '125', last_reference: '124', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', target_reference: '124', amounts: { total: '100.00' }, force_duplicate: 'no', receipt_output: 'BOTH', receipt_email: 'yes' },
+  'ecr-start-preauth': { ...ECR_DEV_CONFIG, reference: '124', last_reference: '123', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', amounts: { total: '100.00' }, receipt_output: 'BOTH', receipt_email: 'yes', manual_entry_indicator: 'no', force_duplicate: 'no' },
+  'ecr-completion': { ...ECR_DEV_CONFIG, reference: '125', last_reference: '124', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', target_reference: '124', amounts: { total: '100.00' }, force_duplicate: 'no', receipt_output: 'BOTH', receipt_email: 'yes' },
 
   // Settlement
   'ecr-settle': mockSettleRequest,
 
   // Reports
-  'ecr-journal': { reference: '54', last_reference: '53', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', target_reference: 'all' },
-  'ecr-detailed-report': { reference: '75', last_reference: '74', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'HTML' },
-  'ecr-totals-report': { reference: '79', last_reference: '75', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'HTML' },
+  'ecr-journal': { ...ECR_DEV_CONFIG, reference: '54', last_reference: '53', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', target_reference: 'all' },
+  'ecr-detailed-report': { ...ECR_DEV_CONFIG, reference: '75', last_reference: '74', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'HTML' },
+  'ecr-totals-report': { ...ECR_DEV_CONFIG, reference: '79', last_reference: '75', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'HTML' },
 
   // Device
-  'ecr-get-device-status': { reference: '56', last_reference: '55', session_id: 'REPLACE-WITH-YOUR-SESSION-ID' },
-  'ecr-start-comm': { reference: '431', last_reference: '430', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'BOTH' },
-  'ecr-reprint': { reference: '120', last_reference: '119', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'BOTH' },
-  'ecr-custom-print': { reference: '20', last_reference: '19', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'Custom receipt text here' },
+  'ecr-get-device-status': { ...ECR_DEV_CONFIG, reference: '56', last_reference: '55', session_id: 'REPLACE-WITH-YOUR-SESSION-ID' },
+  'ecr-start-comm': { ...ECR_DEV_CONFIG, reference: '431', last_reference: '430', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'BOTH' },
+  'ecr-reprint': { ...ECR_DEV_CONFIG, reference: '120', last_reference: '119', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'BOTH' },
+  'ecr-custom-print': { ...ECR_DEV_CONFIG, reference: '20', last_reference: '19', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', receipt_output: 'Custom receipt text here' },
 
   // Signature
-  'ecr-get-signature': { reference: '56', last_reference: '55', session_id: 'REPLACE-WITH-YOUR-SESSION-ID' },
-  'ecr-capture-signature': { reference: '200', last_reference: '199', session_id: 'REPLACE-WITH-YOUR-SESSION-ID' },
+  'ecr-get-signature': { ...ECR_DEV_CONFIG, reference: '56', last_reference: '55', session_id: 'REPLACE-WITH-YOUR-SESSION-ID' },
+  'ecr-capture-signature': { ...ECR_DEV_CONFIG, reference: '200', last_reference: '199', session_id: 'REPLACE-WITH-YOUR-SESSION-ID' },
 
   // Verification
-  'ecr-card-verification': { reference: '220', last_reference: '219', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', force_duplicate: 'no', receipt_output: 'HTML', receipt_email: 'yes', manual_entry_indicator: 'no' },
-  'ecr-confirmation-2opts': { reference: '210', last_reference: '206', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', line_1: 'Confirm?', line_2: 'Please select', option_1: 'Yes', option_2: 'No' },
-  'ecr-confirmation-multopts': { reference: '211', last_reference: '210', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', line_1: 'Select option', line_2: 'Choose one', option_1: 'Option 1', option_2: 'Option 2', option_3: 'Option 3' },
-  'ecr-data-request': { reference: '213', last_reference: '211', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', data_type: 'PHONE', information_requested: 'Enter phone number', default_value: '7871234567' },
-  'ecr-scan-code': { reference: '73', last_reference: '71', session_id: 'REPLACE-WITH-YOUR-SESSION-ID' },
+  'ecr-card-verification': { ...ECR_DEV_CONFIG, reference: '220', last_reference: '219', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', force_duplicate: 'no', receipt_output: 'HTML', receipt_email: 'yes', manual_entry_indicator: 'no' },
+  'ecr-confirmation-2opts': { ...ECR_DEV_CONFIG, reference: '210', last_reference: '206', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', line_1: 'Confirm?', line_2: 'Please select', option_1: 'Yes', option_2: 'No' },
+  'ecr-confirmation-multopts': { ...ECR_DEV_CONFIG, reference: '211', last_reference: '210', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', line_1: 'Select option', line_2: 'Choose one', option_1: 'Option 1', option_2: 'Option 2', option_3: 'Option 3' },
+  'ecr-data-request': { ...ECR_DEV_CONFIG, reference: '213', last_reference: '211', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', data_type: 'PHONE', information_requested: 'Enter phone number', default_value: '7871234567' },
+  'ecr-scan-code': { ...ECR_DEV_CONFIG, reference: '73', last_reference: '71', session_id: 'REPLACE-WITH-YOUR-SESSION-ID' },
 
   // Display
-  'ecr-items-list': { reference: '71', last_reference: '70', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', title: 'Cart Items', products: [{ line_1_left: 'Product 1', line_1_right: '$10.00' }, { line_1_left: 'Product 2', line_1_right: '$20.00' }] },
+  'ecr-items-list': { ...ECR_DEV_CONFIG, reference: '71', last_reference: '70', session_id: 'REPLACE-WITH-YOUR-SESSION-ID', title: 'Cart Items', products: [{ line_1_left: 'Product 1', line_1_right: '$10.00' }, { line_1_left: 'Product 2', line_1_right: '$20.00' }] },
 };
 
 export default function ApiPlayground() {

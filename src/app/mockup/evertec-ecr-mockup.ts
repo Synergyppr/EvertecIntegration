@@ -2,9 +2,12 @@
  * Evertec ECR Mockup Data
  * Sample request/response data for testing and development
  *
- * TERMINAL ROUTING — every request supports two optional override fields:
+ * TERMINAL ROUTING — every request supports these optional override fields:
  *   terminal_url  — Base URL of the physical terminal (e.g., "http://10.10.6.35:2030").
  *                   Falls back to env EVERTEC_ECR_TERMINAL_URL when omitted.
+ *                   Middleware-only: stripped before forwarding to the device.
+ *   api_key       — API key for terminal authentication.
+ *                   Falls back to env EVERTEC_ECR_API_KEY when omitted.
  *                   Middleware-only: stripped before forwarding to the device.
  *   terminal_id   — Terminal identifier assigned by Evertec (e.g., "40000260").
  *                   Falls back to env EVERTEC_ECR_TERMINAL_ID when omitted.
@@ -70,6 +73,7 @@ const TERMINAL_URL = 'http://10.10.6.35:2030';
 const TERMINAL_ID = '40000260';
 const STATION_NUMBER = '1234';
 const CASHIER_ID = '123';
+const API_KEY = 'b443a6cd95a8388d4b3ccea9f3762d41';
 
 // ============================================================================
 // SESSION MANAGEMENT MOCKUPS
@@ -80,6 +84,7 @@ const CASHIER_ID = '123';
  */
 export const mockLogonRequest: LogonRequest = {
   terminal_url: TERMINAL_URL,
+  api_key: API_KEY,
   terminal_id: TERMINAL_ID,
   station_number: STATION_NUMBER,
   cashier_id: CASHIER_ID,
@@ -105,6 +110,7 @@ export const mockLogonResponse: LogonResponse = {
  */
 export const mockLogoffRequest: LogoffRequest = {
   terminal_url: TERMINAL_URL,
+  api_key: API_KEY,
   terminal_id: TERMINAL_ID,
   station_number: STATION_NUMBER,
   cashier_id: CASHIER_ID,
@@ -123,6 +129,7 @@ export const mockLogoffRequest: LogoffRequest = {
  */
 export const mockBaseTransactionRequest = {
   terminal_url: TERMINAL_URL,
+  api_key: API_KEY,
   terminal_id: TERMINAL_ID,
   station_number: STATION_NUMBER,
   cashier_id: CASHIER_ID,
@@ -160,6 +167,7 @@ export const mockBaseTransactionRequest = {
  */
 export const mockSaleRequest: StartSaleRequest = {
   terminal_url: TERMINAL_URL,
+  api_key: API_KEY,
   terminal_id: TERMINAL_ID,
   station_number: STATION_NUMBER,
   cashier_id: CASHIER_ID,
@@ -218,6 +226,7 @@ export const mockSaleResponse: TransactionResponse = {
  */
 export const mockTipAdjustRequest: TipAdjustRequest = {
   terminal_url: TERMINAL_URL,
+  api_key: API_KEY,
   terminal_id: TERMINAL_ID,
   station_number: STATION_NUMBER,
   cashier_id: CASHIER_ID,
@@ -250,6 +259,7 @@ export const mockTipAdjustResponse: TipAdjustResponse = {
  */
 export const mockVoidRequest: VoidRequest = {
   terminal_url: TERMINAL_URL,
+  api_key: API_KEY,
   terminal_id: TERMINAL_ID,
   station_number: STATION_NUMBER,
   cashier_id: CASHIER_ID,
@@ -284,6 +294,7 @@ export const mockVoidResponse: VoidResponse = {
  */
 export const mockRefundRequest: StartRefundRequest = {
   terminal_url: TERMINAL_URL,
+  api_key: API_KEY,
   terminal_id: TERMINAL_ID,
   station_number: STATION_NUMBER,
   cashier_id: CASHIER_ID,
@@ -310,6 +321,7 @@ export const mockRefundRequest: StartRefundRequest = {
 
 export const mockCashRequest: StartCashRequest = {
   terminal_url: TERMINAL_URL,
+  api_key: API_KEY,
   terminal_id: TERMINAL_ID,
   station_number: STATION_NUMBER,
   cashier_id: CASHIER_ID,
@@ -328,6 +340,7 @@ export const mockCashRequest: StartCashRequest = {
 
 export const mockCashRefundRequest: StartCashRefundRequest = {
   terminal_url: TERMINAL_URL,
+  api_key: API_KEY,
   terminal_id: TERMINAL_ID,
   station_number: STATION_NUMBER,
   cashier_id: CASHIER_ID,
@@ -353,6 +366,7 @@ export const mockCashRefundRequest: StartCashRefundRequest = {
  */
 export const mockGetStatusRequest: GetTransactionStatusRequest = {
   terminal_url: TERMINAL_URL,
+  api_key: API_KEY,
   session_id: 'REPLACE-WITH-YOUR-SESSION-ID',
   terminal_id: TERMINAL_ID,
   station_number: STATION_NUMBER,
@@ -410,6 +424,7 @@ export const mockGetStatusRejectedResponse: GetTransactionStatusResponse = {
  */
 export const mockSettleRequest: StartSettleRequest = {
   terminal_url: TERMINAL_URL,
+  api_key: API_KEY,
   terminal_id: TERMINAL_ID,
   station_number: STATION_NUMBER,
   cashier_id: CASHIER_ID,
@@ -443,6 +458,7 @@ export const mockSettleResponse: StartSettleResponse = {
  */
 export const mockPreAuthRequest: StartPreAuthRequest = {
   terminal_url: TERMINAL_URL,
+  api_key: API_KEY,
   terminal_id: TERMINAL_ID,
   station_number: STATION_NUMBER,
   cashier_id: CASHIER_ID,
@@ -463,6 +479,7 @@ export const mockPreAuthRequest: StartPreAuthRequest = {
  */
 export const mockCompletionRequest: CompletionRequest = {
   terminal_url: TERMINAL_URL,
+  api_key: API_KEY,
   terminal_id: TERMINAL_ID,
   station_number: STATION_NUMBER,
   cashier_id: CASHIER_ID,
@@ -489,6 +506,7 @@ export const mockCompletionRequest: CompletionRequest = {
 
 export const mockJournalRequest: JournalRequest = {
   terminal_url: TERMINAL_URL,
+  api_key: API_KEY,
   terminal_id: TERMINAL_ID,
   station_number: STATION_NUMBER,
   cashier_id: CASHIER_ID,
@@ -673,27 +691,31 @@ export const mockTerminalConfigs = {
     station_number: STATION_NUMBER,
     cashier_id: CASHIER_ID,
   },
-  /** Explicit terminal URL — useful when targeting a specific device IP */
+  /** Explicit terminal URL + API key — useful when targeting a specific device IP */
   terminalA: {
     terminal_url: TERMINAL_URL,
+    api_key: API_KEY,
     terminal_id: TERMINAL_ID,
     station_number: STATION_NUMBER,
     cashier_id: CASHIER_ID,
   },
   terminalB: {
     terminal_url: 'http://192.168.1.47:2030',
+    api_key: API_KEY,
     terminal_id: '40000267',
     station_number: '5678',
     cashier_id: '0002',
   },
   athMovilTerminal: {
     terminal_url: 'http://192.168.1.55:2030',
+    api_key: API_KEY,
     terminal_id: '30DR3473',
     station_number: STATION_NUMBER,
     cashier_id: CASHIER_ID,
   },
   ebtTerminal: {
     terminal_url: 'http://192.168.1.60:2030',
+    api_key: API_KEY,
     terminal_id: '30DR3478',
     station_number: STATION_NUMBER,
     cashier_id: CASHIER_ID,

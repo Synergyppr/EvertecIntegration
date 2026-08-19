@@ -102,9 +102,9 @@ export async function makeTerminalRequest<TResponse>(
 ): Promise<{ data: TResponse | EvertecEcrError; status: number }> {
   const config = getEvertecEcrConfig();
 
-  // Extract and strip the middleware-only terminal_url override
+  // Extract and strip middleware-only fields (not forwarded to terminal)
   const payloadRecord = payload as Record<string, unknown>;
-  const { terminal_url: terminalUrlOverride, ...forwardPayload } = payloadRecord ?? {};
+  const { terminal_url: terminalUrlOverride, api_key: apiKeyOverride, ...forwardPayload } = payloadRecord ?? {};
 
   if (terminalUrlOverride !== undefined) {
     if (!validateTerminalUrl(terminalUrlOverride as string)) {
@@ -118,12 +118,15 @@ export async function makeTerminalRequest<TResponse>(
     }
   }
 
+  // Use api_key from body if provided, otherwise fall back to env config
+  const effectiveApiKey = (apiKeyOverride as string) || config.apiKey;
+
   try {
     const response = await fetch(
       buildEndpointUrl(endpoint, terminalUrlOverride as string | undefined),
       {
         method: 'POST',
-        headers: getDefaultHeaders(config.apiKey),
+        headers: getDefaultHeaders(effectiveApiKey),
         body: JSON.stringify(forwardPayload),
         signal: AbortSignal.timeout(config.timeout || 30000),
       }
