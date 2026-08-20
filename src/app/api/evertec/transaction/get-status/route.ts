@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       cashier_id: body.cashier_id || config.cashierId,
       trx_id: body.trx_id,
       terminal_url: body.terminal_url,
+      api_key: body.api_key,
     };
 
     const validation = validateRequiredFields(payload, [
